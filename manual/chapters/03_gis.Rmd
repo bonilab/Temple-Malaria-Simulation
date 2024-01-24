@@ -13,9 +13,17 @@ The first step in preparing the geospatial data is to gather all of the relevant
 3. Malaria prevalence
 4. Travel or friction surface
 
-Possible sources of this data is included in the appendix.
+Possible sources of this data is included in the appendix while Figure \@ref(fig:gisworkflow-png) offers a summary workflow of raster production.
 
-# Data Preperation
+\newpage
+\blandscape
+```{r gisworkflow-png, fig.cap="The typical workflow used when preparing the geospaital data for a country", out.width = "575px", echo = FALSE}
+knitr::include_graphics("figures/gis_workflow.png")
+```
+\elandscape
+\newpage
+
+# Raster Preperation
 
 ## Determining the Projection
 
@@ -182,9 +190,57 @@ knitr::include_graphics("figures/gis_population_raster.png")
 ```
 
 \newpage
-\blandscape
-```{r gisworkflow-png, fig.cap="The typical workflow used when preparing the geospaital data for a country", out.width = "575px", echo = FALSE}
-knitr::include_graphics("figures/gis_workflow.png")
+
+## Prepearing the Prevelence Raster
+
+Now that the population raster has been prepared, the next step is to prepare the *Plasmodium falciparum* prevalence raster. Typically this is done using the prevalence in individuals aged two to ten years, thus the raster is refereed to as the *Pf*PR~2-10~ raster. 
+
+When preparing the *Pf*PR~2-10~ raster, the data from the Malaria Atlas Project (MAP) is considered to be the canonical source; however, there are two things to be aware of when working with data from MAP. First, is that the prevalence raster is based upon a Bayesian space-time geostatistical model that predicts the *Pf*PR~2-10~ for each pixel in the raster [@weiss_mapping_2019]. As such, while MAP is considered the canonical source for prevalence rasters, it should not be treated as the *definitive* source of data as there may be a lag between new data publication and regeneration of the prevalence rasters. When working with MAP data be sure to note the version number associated with the raster since the underlying data likely will change over time along with the algorithm.
+
+The second thing to keep in mind is that the national boundaries for clipping used by MAP may not be in agreement with other data sources (see Figures \@ref(fig:gismapkenyaborder-png) and \@ref(fig:gismapoverlay-png)). The underlying cause of this is the treatment of disputed boundaries and this can be a politically sensitive issue. In the case of the Kenyan data we are using as an illustrative example for this chapter, since the northern border contains the Ilemi Triangle disputed area with the territory claimed by both Kenya and South Sudan [@collins_ilemi_2004].^[ At the time of writing Kenya appears to have *de facto* control of the region.]
+
+```{r gismapkenyaborder-png, fig.cap="The MAP Global \\textit{P. falciparum} Rate zoomed to the area of the disputed border between Kenya and South Sudan. Note the dotted gray lines indicating the disputed boundry and the sudden shift in prevelence.", out.width="450px", echo = FALSE}
+knitr::include_graphics("figures/gis/map_kenya_border.png")
 ```
-\elandscape
-\newpage
+
+```{r gismapoverlay-png, fig.cap="The \\textit{Pf}PR~2-10~ data from map, downloaded via the \"Clip to Country\" feature with symbology adjusted in ArcGIS. Note the admin one raster is visable in the north due to the cliping boundry being smaller than boundry defined by the administrative shape boundry.", out.width="450px", echo = FALSE}
+knitr::include_graphics("figures/gis/map_overlay.png")
+```
+
+Due to the discrepancy between the clipped raster from MAP and the admin one raster, we are going to produce our own *Pf*PR~2-10~ raster from MAP's global raster. Start by downloading the data from MAP, and decompress the data into a convent location (ex., a subdirectory of the `data` directory created earlier; see Figure \@ref(fig:mapglobaldirectory-png)).^[ Be aware that these will be larger files. At the time of writing the compressed file was 189 MB with the compression acting more as a convenience for bundling the 21 TIFF files additional metadata files.] Select the raster that is appropriate for the project -- typically the most recent year of production -- and drag it to the map. When prompted to calculate statistics, click "Yes". Your map should now appear similar to Figure \@ref(fig:mapglobalpfraster-png).
+
+```{r mapglobaldirectory-png, fig.cap="Contents of the MAP global rasters directory in ArcGIS.", out.width="450px", echo = FALSE}
+knitr::include_graphics("figures/gis/map_global_directory.png")
+```
+
+```{r mapglobalpfraster-png, fig.cap="Apperance of ArcGIS after the global raster has been loaded, note the use of the default color scheme.", out.width="450px", echo = FALSE}
+knitr::include_graphics("figures/gis/map_global_pf_raster.png")
+```
+
+Since raster data from MAP is distributed with metadata, ArcGIS should recognize the raster as having a datum of WGS 1984 with an angular unit of degrees. We will start by using `Project Raster` to create a temporary raster using the projection that was selected for the country. Make sure that the `X` and `Y` values for the `Cell Size` are set to "5000" and "5000". While this will result in the loss of some data due to resampling; however, the impact will be nominal since spatial correlation will still apply.
+
+Next, in the `Geoprocessing` tab, type "extract by mask" to search for the `Extract by Mask (Spatial Analyst Tools)`, click the result to load the tool's controls. Enter the following:
+
+1. `Input raster` is the projected raster we just created
+2. `Input raster or feature mask data` is the raster that will be used to extract data from the map, select the admin one raster
+3. Enter the preferred final name and location for the `Output raster`, here `ken_pfpr2to10_2020` is used to indicate this is the *Pf*PR~2-10~ for Kenya in the year 2020
+4. Make sure `Inside` is selected for `Extraction Area`
+5. Select the `Environments Tab`
+6. Under `Output Coordinate System` select `Current Map` to load the map's projection
+7. Under `Snap Raster` select the admin one raster
+8. Click `Run` to execute the tool
+
+Once complete you should see something similar to Figure \@ref(fig:kenyapfprmasked-png). At this point you can delete the global raster that was created by projection, and high or remove the original MAP raster. It is also recommended to adjust the symbology of the *Pf*PR~2-10~ raster as well as adding it to an appropriate group layer (see Figure \@ref(fig:kenyapfprraster-png))
+
+```{r kenyapfprmasked-png, fig.cap="Apperance of ArcGIS after the data has been extracted, note that despite the default color scheme the new raster can be distinguished.", out.width="450px", echo = FALSE}
+knitr::include_graphics("figures/gis/kenya_pfpr_masked.png")
+```
+
+```{r kenyapfprraster-png, fig.cap="Final \\textit{P. falciparum} prevelence raster for Kenya after the symbology was adjusted and the workspace cleaned up. Note the higher projected prevelnce in the disputed Ilemi Triangle region in the north.", out.width="450px", echo = FALSE}
+knitr::include_graphics("figures/gis/kenya_pfpr_raster.png")
+```
+
+# Climatic Data Production
+
+Placeholder for pending work...
+

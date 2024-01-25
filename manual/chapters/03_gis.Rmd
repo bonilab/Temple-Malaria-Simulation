@@ -18,7 +18,7 @@ Possible sources of this data is included in the appendix while Figure \@ref(fig
 \newpage
 \blandscape
 ```{r gisworkflow-png, fig.cap="The typical workflow used when preparing the geospaital data for a country", out.width = "575px", echo = FALSE}
-knitr::include_graphics("figures/gis_workflow.png")
+knitr::include_graphics("figures/gis/workflow.png")
 ```
 \elandscape
 \newpage
@@ -32,23 +32,23 @@ Once all of the relevant geospatial data has been collected, the first step is d
 A typical starting point is to enter the name of the country, which will return a list of all of the relevant records (see Figure \@ref(fig:gisepsgiosearch-png)). Typically, for the purposes of the simulation, using the appropriate Universal Transverse Mercator (UTM) zone projection on the World Geodetic System 1984 (WGS84) datum will provide a reasonable level of accuracy for the simulation. Although large countries may overlap multiple zones, which case the bounding of the projection should be checked to ensure that it covers the majority the country (see Figure \@ref(fig:gisepsgiobounding-png)). Once an appropriate datum and projection has been identified, make a note of it along with the Well-Known ID (WKID) as part of the project documentation since this will be used in the preparation of all of the geospatial data for the simulation.
 
 ```{r gisepsgiosearch-png, fig.cap="The results of a search for \"kenya\" on epsg.io", out.width = "450px", echo = FALSE}
-knitr::include_graphics("figures/gis_epsg_io_search.png")
+knitr::include_graphics("figures/gis/epsg_io_search.png")
 ```
 
 ```{r gisepsgiobounding-png, fig.cap="The details page for Arc 1960 / UTM zone 37N on epsg.io. Note the Well-Known ID (WKID) that appears at the top of the page (EPSG:21097) as well as the bounding box that appears over the map of Kenya.", out.width = "450px", echo = FALSE}
-knitr::include_graphics("figures/gis_epsg_io_bounding.png")
+knitr::include_graphics("figures/gis/epsg_io_bounding.png")
 ```
 
 Once the projection has been determined and data gathered, start by creating a new project in ArcGIS Pro via `New Project > Map` for this example call the project `Kenya`, set the location to a folder such as `C:\GIS\`, and make sure `Create a new folder for this project` is checked. This will create a new project with the default map of the United States (see Figure \@ref(fig:gisdefaultmap-png)). Start by removing the `World Topographic Map` and `World Hillshade` base maps by right clicking on them under `Drawing Order` and selecting `Remove`. You should now have an empty map with no contents listed.
 
 ```{r gisdefaultmap-png, fig.cap="ArcGIS Pro with the default map of the United States", out.width = "450px", echo = FALSE}
-knitr::include_graphics("figures/gis_default_map.png")
+knitr::include_graphics("figures/gis/default_map.png")
 ```
 
 We will now set the coordinate system for the map. Start by right clicking on `Map` under `Drawing Order` and selecting `Properties`, this will load a new window titled `Map Properties: Map`. Click on `Coordinate Systems` on the left hand side of the window, this will display the current coordinate system for the map. By default `WGS 1984 Web Mercator (auxiliary sphere)` is used, but we want to set the map to the coordinate system system selected for the country we are working with. Locate the `Search` box under the `Current Z` box and enter the WKID value identified on epsg.io - using Kenya as our example this would be `21097`. A valid WKID should only return a single entry, in this case `Arc 1960 UTM Zone 37N` (see \@ref(fig:giscoordinatesystem-png)). Make sure the new coordinate system is listed under the `Current XY` and click `OK`.^[ Since the simulation models everything as a flat plane, it is unlikely that `Current Z` will ever be set to anything.] The default coordinate system has now been set for the map.
 
 ```{r giscoordinatesystem-png, fig.cap="Setting the new coordinate system in ArcGIS Pro", out.width = "450px", echo = FALSE}
-knitr::include_graphics("figures/gis_coordinate_system.png")
+knitr::include_graphics("figures/gis/coordinate_system.png")
 ```
 
 ## Preparing the District Raster
@@ -58,7 +58,7 @@ Next, we need to load the administrative boundaries for the country and prepare 
 Start by finding the project directory created by ArcGIS, in this case it is `C:\GIS\Kenya` and create a new folder called `data` and one called `simulation`. The `data` folder will be used for storing any data files that are downloaded. Next, locate the administrative boundaries for the country.^[ For Kenya, these were found on the Humanitarian Data Exchange (HBX) by searching for "kenya" at https://data.humdata.org/dataset/cod-ab-ken. Note that an advantage of using data from HBX is that the data is open access under the Creative Commons Attribution for Intergovernmental Organisations, this is relevant when reproducing shapefile data in maps used in publications.] Typically shapefiles are distributed as a compressed file, decompress the file into the `data` directory and have ArcGIS refresh the folder listing by right clicking on home folder and selecting `Refresh` or pressing the `[F5]` key. You should see something similar to Figure \@ref(fig:gisadminshapefiles-png).
 
 ```{r gisadminshapefiles-png, fig.cap="Refreshed listing of all of the shapefiles in the data directory in ArcGIS Pro", out.width = "450px", echo = FALSE}
-knitr::include_graphics("figures/gis_admin_shapefiles.png")
+knitr::include_graphics("figures/gis/admin_shapefiles.png")
 ```
 
 Next, right click on `Map` under the `Drawing Order` panel and select `New Group Layer`, an entry called "New Group Layer" will appear. Double check on the `New Group Layer` and enter "Administrative Boundaries" as the `Name` in the `Layer Properties: New Group Layer` dialog that appears. Click `OK` and under the `Drawing Order` panel you should have an entry called `Map` with an entry called `Administrative Boundaries` below it. 
@@ -66,7 +66,7 @@ Next, right click on `Map` under the `Drawing Order` panel and select `New Group
 Now, locate the administrative levels zero (or national boundary), one, and two in the `data` folder of the `Catalog` panel and drag them under the `Administrative Boundaries`. Right click on `Administrative Boundaries` and select `Zoom To Layer` you should now have a map similar to Figure \@ref(fig:gisadminlayers-png).
 
 ```{r gisadminlayers-png, fig.cap="The apperance of the map after all shapefiles have been added. Note that the top most layer -- the national boundry -- is covering all of the other layers", out.width = "450px", echo = FALSE}
-knitr::include_graphics("figures/gis_admin_layers.png")
+knitr::include_graphics("figures/gis/admin_layers.png")
 ```
 
 At this point we could start creating the raster files, but first we should adjust the appearance of the shapefiles to make them easier to work with. Start by renaming them by either double clicking on the layer and changing the name in the `Layer Properties` dialog that appears, or single clicking on the layer name and editing it directly in the `Drawing Order` panel.^[ One suggested format is the country name followed by "Admin NUMBER", or "Kenya - Admin Zero" in the case of our example.] 
@@ -74,11 +74,11 @@ At this point we could start creating the raster files, but first we should adju
 Next, we will adjust the symbology that is being used to render the layers so that we can see them all. Start by right clicking on the administrative level zero layer selecting `Symbology`, the `Symbology` panel should appear on the right. Click on the symbol and in the gallery that appears, select `Black Outline (2pts)`. The map should now refresh with the national border in bold and the administrative level one appearing (see Figure \@ref(fig:gisadminlevelzero-png)). Repeat this process for for level one, selecting `Black Outline (1pt)`. Finally, for the level two layer, start by selecting `Black Outline (1pt)` but then click `Properties`, this update the dialog to show the full list of appearance settings. Click the color box next to `Outline color`, select `Gray 50%`, and click `Apply`. The map should now appear similar to Figure \@ref(fig:gisadjustedlayers-png).
 
 ```{r gisadminlevelzero-png, fig.cap="The appearnace of the map after the symbology of the administrative level zero has been changed", out.width = "450px", echo = FALSE}
-knitr::include_graphics("figures/gis_admin_level_zero.png")
+knitr::include_graphics("figures/gis/admin_level_zero.png")
 ```
 
 ```{r gisadjustedlayers-png, fig.cap="The final apperance of the map after all of the administrative layers have had their symbology updated", out.width = "450px", echo = FALSE}
-knitr::include_graphics("figures/gis_adjusted_layers.png")
+knitr::include_graphics("figures/gis/adjusted_layers.png")
 ```
 
 Now, we will cover the administrative layer one shapefile to a raster file, and this process is the same regardless of the administrative level of a shapefile. To reduce the visual clutter of the map you may also wish to hide the administrative level two shapefile by clicking the box next to the layer name under the `Drawing Order`. 
@@ -86,13 +86,13 @@ Now, we will cover the administrative layer one shapefile to a raster file, and 
 First, we need to examine the data associated with the administrative level one shapefile. This can be done by right clicking on the layer and selecting `Attribute Table`, a spreadsheet should appear below the map (see Figure \@ref(fig:gisattributetable-png)).
 
 ```{r gisattributetable-png, fig.cap="The attribute table for the adminsitriave level one shapefile for Kenya. Note that the FID column is zero indexed with the provience Baringo being associated with the value zero", out.width = "450px", echo = FALSE}
-knitr::include_graphics("figures/gis_attribute_table.png")
+knitr::include_graphics("figures/gis/attribute_table.png")
 ```
 
 In examining the attribute table we want to first check to see if there is a numerically indexed field that we can use as the district id assignment, and what the indexing of the field is. In the case of the data from Kenya, the `FID` field could serve this role, but since it is a reserved field by ArcGIS Pro, it cannot be exported, so we are going to add our own ID field. Start by clicking the `Add` button next to the `Field:` label, this will case the dialog to shift to the fields list for the layer. At the bottom of the list of fields, type "ID" under the `Field Name` and make sure `Short` is selected as the `Data Type`, click save and the updated list should look similar to Figure \@ref(fig:gisaddidfield-png).
 
 ```{r gisaddidfield-png, fig.cap="The updated fields list after the ID field has been added", out.width = "450px", echo = FALSE}
-knitr::include_graphics("figures/gis_add_id_field.png")
+knitr::include_graphics("figures/gis/add_id_field.png")
 ```
 
 Close the `Fields` view and scroll to the right of the attribute table, the new `ID` field should be present with all rows set to zero. Since the `FID` provides a unique value for each row, we can use that as the basis for the district id. 
@@ -112,7 +112,7 @@ With the `ID` column now created, we can proceed to creating the raster. Close t
 Once the calculation is complete you should see a map similar to Figure \@ref(fig:gisadminoneraster-png). Note that the scale should go from one to the number of administrative regions (47 provinces in the case of Kenya) and the symbology selected by ArcGIS Pro may be different. At this point you may wish to create another Group Layer for simulation rasters via the process previously outlined for creating the `Administrative Boundaries` grouping, move the new raster into this grouping. The rendering order of the shapefiles and rasters can be adjusted by changing their order under the `Drawing Order`.
 
 ```{r gisadminoneraster-png, fig.cap="The updated fields list after the ID field has been added", out.width = "450px", echo = FALSE}
-knitr::include_graphics("figures/gis_admin_one_raster.png")
+knitr::include_graphics("figures/gis/admin_one_raster.png")
 ```
 
 ## Exporting the District Mapping File
@@ -122,7 +122,7 @@ Now is a good time to export the mapping CSV file by right clicking on the layer
 Locate the CSV file on disk and open in spreadsheet software such as Microsoft Excel. If you are using Excel do not allow it to convert any of the data since we will be deleting most of it and changing the order. Upon loading the CSV the contents should appear similar to Figure \@ref(fig:gisexcelcsv-png). Delete all columns except for the administrative region name in English and the ID column. Once complete you should have two columns left. Next, change the order of the columns so that the ID column is first, and the English name column is second. Save the CSV file. At this point the district mapping CSV file is ready and the first row will be used as the field headings.^[ Most of the tools that use the district mapping are agnostic as to the column names, although some may expect them to be called `DISTRICT` and `NAME`.]
 
 ```{r gisexcelcsv-png, fig.cap="The data exported by ArcGIS Pro to CSV via the Export Table function", out.width = "450px", echo = FALSE}
-knitr::include_graphics("figures/gis_excel_csv.png")
+knitr::include_graphics("figures/gis/excel_csv.png")
 ```
 
 ## Preparing the Population Raster
@@ -142,11 +142,11 @@ Here we are going to use second option of processing an unconstrained national m
 At this point it is recommended to create a new Group Layer for the raster data (e.g., "Raster Data") and to adjust the symbology of the raster to make it easier to see. Here the raster has been updated so the color scheme is inverted and the "Stretch Type" is set to "Standard Deviation" (see Figure \@ref(fig:gispopvisualupdates-png)).
 
 ```{r gisinitialpopraster-png, fig.cap="The population raster after it has been initially loaded by ArcGIS. Note that much of the map appears to be black, suggesting a population of zero.", out.width="450px", echo = FALSE }
-knitr::include_graphics("figures/gis_initial_pop_raster.png")
+knitr::include_graphics("figures/gis/initial_pop_raster.png")
 ```
 
 ```{r gispopvisualupdates-png, fig.cap="The population raster after it has been moved to a new Group Layer and the symbology is adjusted.", out.width="450px", echo = FALSE }
-knitr::include_graphics("figures/gis_pop_visual_updates.png")
+knitr::include_graphics("figures/gis/pop_visual_updates.png")
 ```
 
 Assuming you are working with data from WorldPop, the next step is to create a new raster whose projection is in meters as opposed to degrees. Under the `Geoprocessing` tab, type "project raster" and click the `Project Raster (Data Management Tools)` command that appears. This will load the `Project Raster` tool to the right side of the screen. Enter the following:
@@ -159,7 +159,7 @@ Assuming you are working with data from WorldPop, the next step is to create a n
 After processing this will create a new raster and add it to the map (see Figure \@ref(fig:gisprojectedpopraster-png)). By default ArcGIS Pro will postfix the names of rasters or shapefiles with the tool used to process them (e.g., "ken_ppp_2020_1_ProjectRaster") and store them in the geodatabase created for the project ("Kenya.gdb" in this case). In most cases these are effectively temporary files and can be deleted once the workflow is complete.
 
 ```{r gisprojectedpopraster-png, fig.cap="The projected population raster, now in 1000 m resolution. Note the default symbology has again been applied by ArcGIS.", out.width="450px", echo = FALSE}
-knitr::include_graphics("figures/gis_projected_pop_raster.png")
+knitr::include_graphics("figures/gis/projected_pop_raster.png")
 ```
 
 Next the resolution of the raster needs to be reduced from 1000 m (1 km) to 5000 m (5 km). In the `Geoprocessing` tab, type "aggregate" and click the `Aggregate (Spatial Analyst Tools)` command that appears. This will load the `Aggregate` tool to the right side of the screen. Enter the following:
@@ -178,15 +178,15 @@ On the `Geoprocessing` tab, type "raster calculator" and click the `Raster Calcu
 At this point temporary rasters created during the projection and aggregation can be deleted. You may also wish to reorganize the location of the raster to be with the previously created district raster in the group layers (see Figure \@ref(fig:gispopulationraster-png)).
 
 ```{r gisaggregatedpop-png, fig.cap="The population raster aggregated up to 5 km. Note that the data now appears slightly more pixelated", out.width="450px", echo = FALSE}
-knitr::include_graphics("figures/gis_aggregated_pop.png")
+knitr::include_graphics("figures/gis/aggregated_pop.png")
 ```
 
 ```{r gisroundedpopulation-png, fig.cap="The output of the Raster Calcluator, note that the new raster has the final name applied to it but temporary rasters are still in place.", out.width="450px", echo = FALSE}
-knitr::include_graphics("figures/gis_rounded_population.png")
+knitr::include_graphics("figures/gis/rounded_population.png")
 ```
 
 ```{r gispopulationraster-png, fig.cap="The final popuation raster, with population aggregated up to 5 km. Note the organization of the raster under the \"Simulation Rasters\" Group Layer and the storage of the raster in the geodatabase.", out.width="450px", echo = FALSE}
-knitr::include_graphics("figures/gis_population_raster.png")
+knitr::include_graphics("figures/gis/population_raster.png")
 ```
 
 \newpage
@@ -238,6 +238,28 @@ knitr::include_graphics("figures/gis/kenya_pfpr_masked.png")
 
 ```{r kenyapfprraster-png, fig.cap="Final \\textit{P. falciparum} prevelence raster for Kenya after the symbology was adjusted and the workspace cleaned up. Note the higher projected prevelnce in the disputed Ilemi Triangle region in the north.", out.width="450px", echo = FALSE}
 knitr::include_graphics("figures/gis/kenya_pfpr_raster.png")
+```
+
+\newpage
+
+## Preparation of Treatment Coverage Raster
+
+Now that we have the administrative regions, population, and *Pf*PR~2-10~ rasters prepared, the last required raster for the simulation is the under-5 and over-5 treatment seeking behavior. The typical source for this data is the Malaria Indicator Survey (MIS) from the Demographic and Health Surveys (DHS) Program, run by USAID.^[ https://dhsprogram.com/] In this example we will be using the 2020 MIS data for Kenya [@division_of_national_malaria_programme_dnmp_kenya_kenya_2021].^[ Note that due to the survey process there is typically a lag between when the survey is conducted, when the results are released. At the time of writing, the 2020 MIS data is the most recent for Kenya.]
+
+<!-- Define the caption for the following figure since we need to include citations -->
+(ref:fig-mis-kenya) Comparison of the EIR versus the prevalence under different population sizes, note the inclusion of calibration points prepared by Malaria Modeling Consortium members (Reproduced from @division_of_national_malaria_programme_dnmp_kenya_kenya_2021, p. xxii)
+```{r miskenya2020-png, fig.cap = "(ref:fig-mis-kenya)", out.width = "450px", echo = FALSE}
+knitr::include_graphics("figures/gis/mis_kenya_2020.png")
+```
+
+Typically, the MIS will follow the administrative boundaries of a country, but it's not also uncommon for boundaries to be re-drawn for a survey, as was the case for the Kenyan 2020 MIS (see Figure \@ref(fig:miskenya2020-png)). As such, the first step will be to acquire the survey boundary data via the DHS Spatial Data Repository.^[ https://spatialdata.dhsprogram.com/home/] Once the shapefile has been imported into ArcPRO it is important to assess the survey boundaries and note any discrepancies that are present. In the case of the Keyna MIS 2020 boundaries we can see that the Ilemi Triangle disputed area is excluded along Lake Turkana and Lake Victoria.
+
+```{r dhsmisboundaries-png, fig.cap="The DHS Program's Spatial Data Repositry showing the results of a search for Kenya", out.width="450px", echo = FALSE}
+knitr::include_graphics("figures/gis/dhs_mis_boundaries.png")
+```
+
+```{r misboundryoverlay-png, fig.cap="The 2020 MIS boundries imported into ArcGIS with the default symbology. Note the appearnace of the survey bounderies in gray while the admin one bounderies are in black. The overlay suggests that the survey was defined by a lower adminsitraive level. Also note that some reasons were excluded from the survey.", out.width="450px", echo = FALSE}
+knitr::include_graphics("figures/gis/mis_boundry_overlay.png")
 ```
 
 # Climatic Data Production

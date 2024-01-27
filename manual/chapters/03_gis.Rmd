@@ -115,7 +115,7 @@ Once the calculation is complete you should see a map similar to Figure \@ref(fi
 knitr::include_graphics("figures/gis/admin_one_raster.png")
 ```
 
-## Exporting the District Mapping File
+### Exporting the District Mapping File
 
 Now is a good time to export the mapping CSV file by right clicking on the layer under `Drawing Order`, and selecting `Data > Export Table`. This causes a new dialog to appear, click the folder icon next to the `Output Table` and the select the location to save the CSV file (e.g., the `simulation` folder created for the project) and enter the file name *inclusive of the .csv extension* and click `Save`, click `OK` to export the CSV file and close the dialog.
 
@@ -191,7 +191,7 @@ knitr::include_graphics("figures/gis/population_raster.png")
 
 \newpage
 
-## Prepearing the Prevelence Raster
+## Preparing the Prevelence Raster
 
 Now that the population raster has been prepared, the next step is to prepare the *Plasmodium falciparum* prevalence raster. Typically this is done using the prevalence in individuals aged two to ten years, thus the raster is refereed to as the *Pf*PR~2-10~ raster. 
 
@@ -207,7 +207,7 @@ knitr::include_graphics("figures/gis/map_kenya_border.png")
 knitr::include_graphics("figures/gis/map_overlay.png")
 ```
 
-Due to the discrepancy between the clipped raster from MAP and the admin one raster, we are going to produce our own *Pf*PR~2-10~ raster from MAP's global raster. Start by downloading the data from MAP, and decompress the data into a convent location (ex., a subdirectory of the `data` directory created earlier; see Figure \@ref(fig:mapglobaldirectory-png)).^[ Be aware that these will be larger files. At the time of writing the compressed file was 189 MB with the compression acting more as a convenience for bundling the 21 TIFF files additional metadata files.] Select the raster that is appropriate for the project -- typically the most recent year of production -- and drag it to the map. When prompted to calculate statistics, click "Yes". Your map should now appear similar to Figure \@ref(fig:mapglobalpfraster-png).
+Due to the discrepancy between the clipped raster from MAP and the admin one raster, we are going to produce our own *Pf*PR~2-10~ raster from MAP's global raster. Start by downloading the data from MAP, and decompress the data into a convent location (ex., a sub-directory of the `data` directory created earlier; see Figure \@ref(fig:mapglobaldirectory-png)).^[ Be aware that these will be larger files. At the time of writing the compressed file was 189 MB with the compression acting more as a convenience for bundling the 21 TIFF files additional metadata files.] Select the raster that is appropriate for the project -- typically the most recent year of production -- and drag it to the map. When prompted to calculate statistics, click "Yes". Your map should now appear similar to Figure \@ref(fig:mapglobalpfraster-png).
 
 ```{r mapglobaldirectory-png, fig.cap="Contents of the MAP global rasters directory in ArcGIS.", out.width="450px", echo = FALSE}
 knitr::include_graphics("figures/gis/map_global_directory.png")
@@ -217,7 +217,7 @@ knitr::include_graphics("figures/gis/map_global_directory.png")
 knitr::include_graphics("figures/gis/map_global_pf_raster.png")
 ```
 
-Since raster data from MAP is distributed with metadata, ArcGIS should recognize the raster as having a datum of WGS 1984 with an angular unit of degrees. We will start by using `Project Raster` to create a temporary raster using the projection that was selected for the country. Make sure that the `X` and `Y` values for the `Cell Size` are set to "5000" and "5000". While this will result in the loss of some data due to resampling; however, the impact will be nominal since spatial correlation will still apply.
+Since raster data from MAP is distributed with metadata, ArcGIS should recognize the raster as having a datum of WGS 1984 with an angular unit of degrees. We will start by using `Project Raster` to create a temporary raster using the projection that was selected for the country. Make sure that the `X` and `Y` values for the `Cell Size` are set to "5000" and "5000". While this will result in the loss of some data due to re-sampling; however, the impact will be nominal since spatial correlation will still apply.
 
 Next, in the `Geoprocessing` tab, type "extract by mask" to search for the `Extract by Mask (Spatial Analyst Tools)`, click the result to load the tool's controls. Enter the following:
 
@@ -242,7 +242,7 @@ knitr::include_graphics("figures/gis/kenya_pfpr_raster.png")
 
 \newpage
 
-## Preparation of Treatment Coverage Raster
+## Preparing the Treatment Coverage Raster
 
 Now that we have the administrative regions, population, and *Pf*PR~2-10~ rasters prepared, the last required raster for the simulation is the under-5 and over-5 treatment seeking behavior. The typical source for this data is the Malaria Indicator Survey (MIS) from the Demographic and Health Surveys (DHS) Program, run by USAID.^[ https://dhsprogram.com/] In this example we will be using the 2020 MIS data for Kenya [@division_of_national_malaria_programme_dnmp_kenya_kenya_2021].^[ Note that due to the survey process there is typically a lag between when the survey is conducted, when the results are released. At the time of writing, the 2020 MIS data is the most recent for Kenya.]
 
@@ -339,11 +339,34 @@ Once complete the final raster should looks similar to Figure \@ref(fig:treatmen
 knitr::include_graphics("figures/gis/treatment_raster.png")
 ```
 
-## Preperation of Travel Surface
+## Preparing the Travel Surface
 
-Placeholder for pending work...
+Production of a travel surface -- also referred to as a friction surface -- is optional and dependent upon the movement model selected for a country in the simulation. However, in the case of our example of Kenya, the size of the country is large enough that accounting for travel time is likely to be a necessary part of the country's calibration. 
 
-## Preperation of ASC Files
+In addition to *Pf*PR~2-10~ rasters, the Malaria Atlas Project (MAP) also produces three travel time surfaces that can be used with the simulation:
+
+1. Global Motorized Travel Time to Healthcare
+2. Global Walking Only Travel Time To Healthcare
+3. Global Travel Time to Cities
+
+Each of these travel time rasters serves a different purpose, and presently the generalized movement model in the simulation that supports a travel surface (i.e., `WesolowskiSurface`) works best with the travel time to cities raster.
+
+Since the travel time raster is produced by MAP, using their option to "Clip to Country" is going to produce the same raster extent as the *Pf*PR~2-10~ raster. In the case of Kenya this means that the Ilemi Triangle will not be included due to being disputed territory. However, the workflow to prepare the raster is the same as the *Pf*PR~2-10~ raster:
+
+1. Start by downloading the global travel time data, unzip it to a convenient location for the project.
+2. Add the global travel time raster to the map, be sure to build pyramids and calculate statistics.
+3. Use `Project Raster` to project the raster to the same projection as the map with the X, Y `Cell Size` both set to 5000 using `Majority resampling` for the `Resampling Technique`.
+4. Use `Extract by Mask` tool, using the admin one raster as the mask and snap raster, the output coordinate system should be the same as the map.
+
+After cleaning up the work space you should have travel time raster that appears similar to Figure \@ref(fig:traveltimeraster-png). 
+
+While this is a streamlined process, the underlying resolution of the travel time raster is similar to the population raster from WorldPop. As such, this will result in considerable data loss in the process of going from 30 arc seconds to 5,000 meters. If data accuracy is necessary then the workflow can be adjusted to following one similar to creating the population raster -- although the mean or median should be taken as part of the aggregation as opposed to sum -- however, this should be contextualized against the 25 km^2^ that each cell in the raster will represent. While a more elaborate workflow based upon aggregation as opposed to resampling may be more accurate in a technical sense, the difference will not have a significant impact upon the model fidelity due to the distance involved in crossing a single cell.^[ The average walking speed of adults is about 5 km/h, while a motorized vehicle on roads (or good terrain) will be quicker, the key point here is that in practical terms the cells are actually quite large!]
+
+```{r traveltimeraster-png, fig.cap="The final treatment seeking raster with the admin one border overlaid. Note that the symbology has been updated to unqiue values, with only the five entered under-5 treatment seeking rates present.", out.width="450px", echo = FALSE}
+knitr::include_graphics("figures/gis/travel_time_raster.png")
+```
+
+## Exporting the ASC Files
 
 Placeholder for pending work...
 

@@ -1,12 +1,12 @@
 # PSU-CIDD-Malaria-Simulation
 
-[Penn State](https://www.psu.edu/) - [Center for Infectious Disease Dynamics (CIDD)](https://www.huck.psu.edu/institutes-and-centers/center-for-infectious-disease-dynamics) - [Boni Lab](http://mol.ax/)
+[Temple University](https://www.temple.edu/) - [Boni Lab](http://mol.ax/)
 
 ---
 
 ## Overview
 
-This repository contains the working codebase for the Spatial Malaria Simulation (MaSim) under development by the Boni Lab at Penn State. The codebase was originally forked from [maciekboni/PSU-CIDD-Malaria-Simulation](https://github.com/maciekboni/PSU-CIDD-Malaria-Simulation) and was detached in perpetration of future development.
+This repository contains the working codebase for the Spatial Malaria Simulation (MaSim) under development by the Boni Lab at Temple University. The codebase was originally forked from [maciekboni/PSU-CIDD-Malaria-Simulation](https://github.com/maciekboni/PSU-CIDD-Malaria-Simulation) and was detached in perpetration of future development.
 
 A comprehensive [technical manual](manual/manual.pdf) (PDF) for the simulation can be found in the [manual](manual/) directory which includes comprehensive directions for working with the simulation; however, a basic reference is provided in the Wiki. Stable code specific to publications are maintained in repositories under the [Boni Lab on GitHub](https://github.com/bonilab). 
 

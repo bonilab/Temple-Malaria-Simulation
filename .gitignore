@@ -1,3 +1,5 @@
+# clangd cache
+.cache*
 
 # Ignore IDE directories
 .idea
@@ -17,6 +19,7 @@ bin
 node_modules
 Testing
 cmake-*
+compile_commands.json
 
 # Ignore the backups of diagrams
 documentation/diagrams/*.~vsdx

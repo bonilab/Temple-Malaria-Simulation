@@ -269,7 +269,7 @@ void SpatialData::load(const std::string& filename, SpatialFileType type) {
 void SpatialData::load_raster(SpatialFileType type) {
     // Verify that the raster data has been loaded
     if (data[type] == nullptr) {
-        throw std::runtime_error(fmt::format("{} called without raster, type id: {}", __FUNCTION__, type));
+    throw std::runtime_error(fmt::format("{} called without raster, type id: {}", __FUNCTION__, static_cast<uint32_t>(type)));
     }
     auto *values = data[type];
 
@@ -284,7 +284,7 @@ void SpatialData::load_raster(SpatialFileType type) {
             if (values->data[row][col] == values->NODATA_VALUE) { continue; }
 
             if (id > count) {
-                throw std::runtime_error(fmt::format("Raster misalignment: pixel count exceeds {} expected while loading raster type {}", count, type));
+                throw std::runtime_error(fmt::format("Raster misalignment: pixel count exceeds {} expected while loading raster type {}", count, static_cast<uint32_t>(type)));
             }
 
             switch (type) {
@@ -305,7 +305,7 @@ void SpatialData::load_raster(SpatialFileType type) {
                     location_db[id].p_treatment_more_than_5 = values->data[row][col]; 
                     break;
                 default: 
-                    throw std::runtime_error(fmt::format("{} called with invalid raster, type id: {}", __FUNCTION__, type));
+                    throw std::runtime_error(fmt::format("{} called with invalid raster, type id: {}", __FUNCTION__, static_cast<uint32_t>(type)));
             }
             id++;
         }
@@ -313,7 +313,7 @@ void SpatialData::load_raster(SpatialFileType type) {
 
     // When we are done the last id value should match the number of locations, accounting for zero indexing
     if ((unsigned)(id) != count) {
-        throw std::runtime_error(fmt::format("Raster misalignment: found {} pixels, expected {} while loading raster type {}", id, count, type));
+        throw std::runtime_error(fmt::format("Raster misalignment: found {} pixels, expected {} while loading raster type {}", id, count, static_cast<uint32_t>(type)));
     }
 
     // Log the updates
@@ -447,7 +447,7 @@ void SpatialData::refresh() {
 void SpatialData::write(const std::string& filename, SpatialFileType type) {
     // Check to make sure there is something to write
     if (data[type] == nullptr) {
-        throw std::runtime_error(fmt::format("No data for spatial file type {}, write file {}", type, filename)); 
+        throw std::runtime_error(fmt::format("No data for spatial file type {}, write file {}", static_cast<uint32_t>(type), filename)); 
     }
 
     // Write the data

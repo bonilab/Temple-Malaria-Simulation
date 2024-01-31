@@ -8,12 +8,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # Enable if building on the cluster, via the command line use -DBUILD_CLUSTER:BOOL=true
 set(BUILD_CLUSTER false CACHE BOOL "Enable for builds on the cluster")
 
-option(USING_ZAPCC "Use ZAPCC compiler." OFF)
-if (USING_ZAPCC)
-  SET(CMAKE_C_COMPILER /home/ubuntu/zapcc-20170802-175507/bin/zapcc)
-  SET(CMAKE_CXX_COMPILER /home/ubuntu/zapcc-20170802-175507/bin/zapcc++)
-endif ()
-
 if (WIN32)
   set(CMAKE_CXX_FLAGS_RELEASE "-DNOMINMAX ${CMAKE_CXX_FLAGS_RELEASE} /MT")
   set(CMAKE_CXX_FLAGS_DEBUG "-DNOMINMAX ${CMAKE_CXX_FLAGS_DEBUG} /MTd")
@@ -32,12 +26,20 @@ ENDIF()
 find_package(GSL REQUIRED)
 find_package(yaml-cpp CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
+find_package(libpqxx CONFIG REQUIRED)
+find_package(PostgreSQL REQUIRED)
+find_package(CLI11 CONFIG REQUIRED)
+find_package(date CONFIG REQUIRED)
+find_package(args CONFIG REQUIRED)
+
+IF (BUILD_CLUSTER)
+  find_package(SQLite3 REQUIRED)
+ELSE()
+  find_package(unofficial-sqlite3 CONFIG REQUIRED)
+ENDIF()
 
 # Include external projects
 set(EXT_PROJECTS_DIR ${PROJECT_SOURCE_DIR}/ext)
-add_subdirectory(${EXT_PROJECTS_DIR}/date)
-add_subdirectory(${EXT_PROJECTS_DIR}/args)
-include_directories(${YAML_CPP_INCLUDE_DIR} ${DATE_INCLUDE_DIR} ${ARGS_INCLUDE_DIR} ${EXT_PROJECTS_DIR}/CLI11)
 
 # Add the source subdirectory
 add_subdirectory(src)

@@ -9,7 +9,7 @@
 #include <thread>
 
 #include "easylogging++.h"
-#include "error_handler.hxx"
+/* #include "error_handler.hxx" */
 #include "Helpers/cpu.hxx"
 #include "Helpers/DbLoader.hxx"
 #include "Helpers/OSHelpers.h"
@@ -18,21 +18,6 @@
 
 // Version information, be sure to update the file for major builds
 #include "version.h"
-
-// Set this flag to disable Linux / Unix specific code, this should be provided
-// via CMake automatically or by the compiler for WIN32 or macOS
-#if defined(_WIN32) || defined(__APPLE__)
-#define __DISABLE_CRIT_ERR
-#endif
-
-#ifndef __DISABLE_CRIT_ERR
-namespace {
-    // Invoke set_terminate as part of global constant initialization to scope it to the full application
-    // NOLINTBEGIN(readability-static-definition-in-anonymous-namespace)
-    [[maybe_unused]] static const bool SET_TERMINATE = std::set_terminate(crit_err_terminate);
-    // NOLINTEND(readability-static-definition-in-anonymous-namespace)
-}
-#endif
 
 // NOLINTBEGIN(cert-err58-cpp) / Assume that the logger will work correctly
 INITIALIZE_EASYLOGGINGPP
@@ -62,39 +47,7 @@ void config_logger() {
   el::Loggers::reconfigureLogger("default", default_conf);
 }
 
-void config_critical_errors() {
-  // Set the last chance error handler
-  struct sigaction sigact{};
-  sigact.sa_sigaction = crit_err_hdlr;
-  sigact.sa_flags = SA_RESTART | SA_SIGINFO;
-
-  // Set the error handler for unhandled exceptions
-  if (sigaction(SIGABRT, &sigact, (struct sigaction *)nullptr) != 0) {
-      std::cerr << "error setting handler for signal " << SIGABRT 
-                << " (" << strsignal(SIGABRT) << ")\n";
-      exit(EXIT_FAILURE);
-  }
-
-  // Set the error handler for segmentation faults
-  if (sigaction(SIGSEGV, &sigact, (struct sigaction *)nullptr) != 0) {
-      std::cerr << "error setting handler for signal " << SIGSEGV 
-                << " (" << strsignal(SIGSEGV) << ")\n";
-      exit(EXIT_FAILURE);      
-  }
-
-  // Set the error handler for bus errors
-  if (sigaction(SIGBUS, &sigact, (struct sigaction *)nullptr) != 0) {
-      std::cerr << "error setting handler for signal " << SIGBUS 
-                << " (" << strsignal(SIGBUS) << ")\n";
-      exit(EXIT_FAILURE);      
-  }
-}
-
 int main(const int argc, char **argv) {
-
-    #ifndef __DISABLE_CRIT_ERR
-    config_critical_errors();
-    #endif
 
     // Parse the CLI
     int job_number = 0;
@@ -143,7 +96,7 @@ void handle_cli(Model *model, int argc, char **argv, int& job_number, std::strin
    * --md          - record the movement between districts
    */
   // NOLINTBEGIN(cppcoreguidelines-slicing) / Disable the slicing check while we define the argument parser
-  args::ArgumentParser parser("Individual-based simulation for malaria.", "Boni Lab at Penn State");
+  args::ArgumentParser parser("Individual-based simulation for malaria.", "Boni Lab at Temple University");
   args::Group commands(parser, "commands");
   args::HelpFlag help(commands, "help", "Display this help menu", {'h', "help"});
   args::ValueFlag<std::string> input_file(commands, "string", "The config file (YAML format). \nEx: MaSim -i input.yml", {'i', 'c', "input", "config"});
@@ -189,11 +142,21 @@ void handle_cli(Model *model, int argc, char **argv, int& job_number, std::strin
     exit(EXIT_SUCCESS);
   }
   catch (const args::ParseError &e) {
-    LOG(ERROR) << fmt::format("{0} {1}", e.what(), parser);
+    std::string parserInfo;
+    std::ostringstream oss;
+    oss << parser;
+    parserInfo = oss.str();
+
+    LOG(ERROR) << fmt::format("{0} {1}", e.what(), parserInfo);
     exit(EXIT_FAILURE);
   }
   catch (const args::ValidationError &e) {
-    LOG(ERROR) << fmt::format("{0} {1}", e.what(), parser);
+    std::string parserInfo;
+    std::ostringstream oss;
+    oss << parser;
+    parserInfo = oss.str();
+
+    LOG(ERROR) << fmt::format("{0} {1}", e.what(), parserInfo);
     exit(EXIT_FAILURE);
   }
 

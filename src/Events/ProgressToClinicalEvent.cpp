@@ -69,13 +69,13 @@ void ProgressToClinicalEvent::execute() {
   Model::MAIN_DATA_COLLECTOR->collect_1_clinical_episode(person->location(),
                                                          person->age_class());
 
-  const auto p = Model::RANDOM->random_flat(0.0, 1.0);
+  const auto rand_p = Model::RANDOM->random_flat(0.0, 1.0);
 
   const auto p_treatment =
       Model::TREATMENT_COVERAGE->get_probability_to_be_treated(
           person->location(), person->age());
 
-  if (p <= p_treatment) {
+  if (rand_p <= p_treatment) {
     // Give the individual the relevant therapy
     auto* therapy = Model::TREATMENT_STRATEGY->get_therapy(person);
     person->receive_therapy(therapy, clinical_caused_parasite_);
@@ -117,36 +117,33 @@ void ProgressToClinicalEvent::execute() {
     Model::MAIN_DATA_COLLECTOR->record_1_non_treated_case(person->location(),
                                                           person->age_class());
 
-    receive_no_treatment_routine(person);
+    if (person->will_progress_to_death_when_receive_no_treatment()) {
+      person->cancel_all_events_except(nullptr);
+      person->set_host_state(Person::DEAD);
+    }
     if (person->host_state() == Person::DEAD) {
       Model::MAIN_DATA_COLLECTOR->record_1_malaria_death(person->location(),
                                                          person->age_class());
       return;
     }
 
-    person->schedule_end_clinical_by_no_treatment_event(
-        clinical_caused_parasite_);
+    person->schedule_end_clinical_event(clinical_caused_parasite_);
   }
 }
 
 void ProgressToClinicalEvent::schedule_event(
-    Scheduler* scheduler, Person* p,
+    Scheduler* scheduler, Person* person,
     ClonalParasitePopulation* clinical_caused_parasite, const int &time) {
   // Ensure that the scheduler exists
   assert(scheduler != nullptr);
 
   // Create the event to be added to the queue
-  auto* e = new ProgressToClinicalEvent();
-  e->dispatcher = p;
-  e->set_clinical_caused_parasite(clinical_caused_parasite);
-  e->time = time;
-  p->add(e);
-  scheduler->schedule_individual_event(e);
+  auto* event = new ProgressToClinicalEvent();
+  event->dispatcher = person;
+  event->set_clinical_caused_parasite(clinical_caused_parasite);
+  event->time = time;
+  person->add(event);
+  scheduler->schedule_individual_event(event);
 }
 
-void ProgressToClinicalEvent::receive_no_treatment_routine(Person* p) {
-  if (p->will_progress_to_death_when_receive_no_treatment()) {
-    p->cancel_all_events_except(nullptr);
-    p->set_host_state(Person::DEAD);
-  }
-}
+void ProgressToClinicalEvent::receive_no_treatment_routine(Person* person) {}

@@ -18,7 +18,6 @@
 #include "Core/Random.h"
 #include "DrugsInBlood.h"
 #include "Events/CirculateToTargetLocationNextDayEvent.h"
-#include "Events/EndClinicalByNoTreatmentEvent.h"
 #include "Events/EndClinicalEvent.h"
 #include "Events/MatureGametocyteEvent.h"
 #include "Events/MoveParasiteToBloodEvent.h"
@@ -468,16 +467,6 @@ void Person::schedule_end_clinical_event(
       Model::SCHEDULER->current_time() + dClinical);
 }
 
-void Person::schedule_end_clinical_by_no_treatment_event(
-    ClonalParasitePopulation* clinical_caused_parasite) {
-  auto d_clinical = Model::RANDOM->random_normal(7, 2);
-  d_clinical = std::min<int>(std::max<int>(d_clinical, 5), 14);
-
-  EndClinicalByNoTreatmentEvent::schedule_event(
-      Model::SCHEDULER, this, clinical_caused_parasite,
-      Model::SCHEDULER->current_time() + d_clinical);
-}
-
 void Person::change_state_when_no_parasite_in_blood() {
   if (all_clonal_parasite_populations_->size() == 0) {
     if (liver_parasite_type_ == nullptr) {
@@ -489,23 +478,88 @@ void Person::change_state_when_no_parasite_in_blood() {
   }
 }
 
-void Person::determine_relapse_or_not(
-    ClonalParasitePopulation* clinical_caused_parasite) {
-  if (all_clonal_parasite_populations_->contain(clinical_caused_parasite)) {
-    const auto p = Model::RANDOM->random_flat(0.0, 1.0);
+/**
+ * Calculate the probability of developing clinical symptoms in recrudescent
+ * infections based on malaria prevalence (PfPR2-10) and whether the trial
+ * enrolled only young children.
+ *
+ * Parameters are taken from the paper:
+ * Mumtaz, R., Okell, L.C. & Challenger, J.D. Asymptomatic recrudescence after
+ * artemether–lumefantrine treatment for uncomplicated falciparum malaria: a
+ * systematic review and meta-analysis. Malar J 19, 453 (2020).
+ * https://doi.org/10.1186/s12936-020-03520-1
+ *
+ * @param pfpr Malaria prevalence (PfPR2-10) as a percentage (e.g., 10 for 10%)
+ * @param enrollYoungChildren Boolean indicating if the trial enrolled only
+ * young children
+ * @return Probability of symptomatic recrudescences as a percentage
+ */
+double calculate_symptomatic_probability(double pfpr,
+                                         bool isYoungChildren = false) {
+  // Base probability for adults at 0% PfPR
+  const double baseProbability = 52.0;
 
-    if (p <= Model::CONFIG->p_relapse()) {
-      // progress to clinical after several days
+  // Calculate the odds ratio reduction for increase in PfPR
+  const double reductionFactor = 1.17;
+  const double oddRationFactorForYoungChildren = 1.61;
+
+  // Calculate the odds for the given PfPR
+  double oddsRatio = pow((1 / reductionFactor), (pfpr / 10));
+
+  if (isYoungChildren) {
+    // Adjust odds ratio for young children
+    oddsRatio *= oddRationFactorForYoungChildren;
+  }
+
+  // Convert odds ratio back to probability
+  double baseOdds = baseProbability / (100 - baseProbability);
+  double newOdds = baseOdds * oddsRatio;
+  double probability = newOdds / (1 + newOdds);
+
+  return probability;
+}
+
+void Person::determine_symptomatic_recrudescence(
+    ClonalParasitePopulation* clinical_caused_parasite) {
+  auto log_parasite_density =
+      clinical_caused_parasite->last_update_log10_parasite_density();
+
+  const bool isHigherThanRecrudesenceThreshold = log_parasite_density > 2;
+
+  if (all_clonal_parasite_populations_->contain(clinical_caused_parasite)
+      && isHigherThanRecrudesenceThreshold) {
+    const auto random_p = Model::RANDOM->random_flat(0.0, 1.0);
+
+    const auto pfpr2_10 =
+        Model::MAIN_DATA_COLLECTOR->get_blood_slide_prevalence(location(), 2,
+                                                               10)
+        * 100;
+
+    const auto isYoungChildren = age() <= 6;
+
+    const auto probability_develop_symptom =
+        calculate_symptomatic_probability(pfpr2_10, isYoungChildren);
+
+    if (random_p <= probability_develop_symptom) {
+      // The last clinical caused parasite is going to relapse
+      // regardless whether the induvidual are under treatment or not
+      // Set the update function to progress to clinical
       clinical_caused_parasite->set_update_function(
           Model::MODEL->progress_to_clinical_update_function());
+
+      // Set the last update parasite density to the asymptomatic level
       clinical_caused_parasite->set_last_update_log10_parasite_density(
           Model::CONFIG->parasite_density_level()
               .log_parasite_density_asymptomatic);
-      schedule_relapse_event(clinical_caused_parasite,
-                             Model::CONFIG->relapse_duration());
+      // Schedule a relapse event
+      schedule_clinical_recrudesence_event(clinical_caused_parasite);
 
     } else {
-      // progress to clearance
+      // continue the assymptomatic state with either having drug or immunity
+
+      // If the last update parasite density is greater than the asymptomatic
+      // level, adjust it. We don't want to have high parasitaemia yn
+      // asymptomatic
       if (clinical_caused_parasite->last_update_log10_parasite_density()
           > Model::CONFIG->parasite_density_level()
                 .log_parasite_density_asymptomatic) {
@@ -513,8 +567,16 @@ void Person::determine_relapse_or_not(
             Model::CONFIG->parasite_density_level()
                 .log_parasite_density_asymptomatic);
       }
-      clinical_caused_parasite->set_update_function(
-          Model::MODEL->immunity_clearance_update_function());
+
+      if (drugs_in_blood_->size() > 0) {
+        // Set the update function to having drug
+        clinical_caused_parasite->set_update_function(
+            Model::MODEL->having_drug_update_function());
+      } else {
+        // Set the update function to immunity clearance
+        clinical_caused_parasite->set_update_function(
+            Model::MODEL->immunity_clearance_update_function());
+      }
     }
   }
 }
@@ -531,9 +593,7 @@ void Person::determine_clinical_or_not(
       clinical_caused_parasite->set_last_update_log10_parasite_density(
           Model::CONFIG->parasite_density_level()
               .log_parasite_density_asymptomatic);
-      schedule_relapse_event(clinical_caused_parasite,
-                             Model::CONFIG->relapse_duration());
-
+      schedule_progress_to_clinical_event_by(clinical_caused_parasite);
     } else {
       // progress to clearance
 
@@ -543,15 +603,16 @@ void Person::determine_clinical_or_not(
   }
 }
 
-void Person::schedule_relapse_event(
-    ClonalParasitePopulation* clinical_caused_parasite,
-    const int &time_until_relapse) {
-  int duration = Model::RANDOM->random_normal(time_until_relapse, 15);
-  duration = std::min<int>(std::max<int>(duration, time_until_relapse - 15),
-                           time_until_relapse + 15);
+void Person::schedule_clinical_recrudesence_event(
+    ClonalParasitePopulation* clinical_caused_parasite) {
+  // assumming the onset of clinical symptoms is day 14 to 63 and end of
+  // clinical symptom is day 7.
+  int days_to_clinical = Model::RANDOM->random_normal(14, 5);
+  days_to_clinical = std::min<int>(std::max<int>(days_to_clinical, 7), 54);
+
   ProgressToClinicalEvent::schedule_event(
       Model::SCHEDULER, this, clinical_caused_parasite,
-      Model::SCHEDULER->current_time() + duration);
+      Model::SCHEDULER->current_time() + days_to_clinical);
 }
 
 void Person::update() {
@@ -697,11 +758,11 @@ void Person::randomly_choose_target_location() {
     // already chose
     return;
   }
-  int target_location =
-      today_target_locations_->size() == 1
-          ? today_target_locations_->front()
-          : today_target_locations_->at(static_cast<int>(
-              Model::RANDOM->random_uniform(today_target_locations_->size())));
+  int target_location = today_target_locations_->size() == 1
+                            ? today_target_locations_->front()
+                            : today_target_locations_->at(static_cast<int>(
+                                  Model::RANDOM->random_uniform(
+                                      today_target_locations_->size())));
 
   // Report the movement if need be
   if (Model::MODEL->report_movement()) {

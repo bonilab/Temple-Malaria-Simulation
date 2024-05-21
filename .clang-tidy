@@ -66,7 +66,7 @@ CheckOptions:
   - { key: readability-identifier-naming.GlobalVariableCase, value: CamelCase }
 
   - { key: readability-identifier-naming.LocalVariableCase, value: aNy_CasE }
-  - { key: readability-identifier-naming.ParameterCase, value: camelBack }
+  - { key: readability-identifier-naming.ParameterCase, value: aNy_CasE }
   #static
   - { key: readability-identifier-naming.ClassMemberCase, value: lower_case }
   - { key: readability-identifier-naming.ClassMethodCase, value: lower_case }

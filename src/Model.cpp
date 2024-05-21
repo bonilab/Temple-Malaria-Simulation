@@ -12,8 +12,6 @@
 #include "Core/Random.h"
 #include "Events/BirthdayEvent.h"
 #include "Events/CirculateToTargetLocationNextDayEvent.h"
-#include "Events/EndClinicalByNoTreatmentEvent.h"
-#include "Events/EndClinicalDueToDrugResistanceEvent.h"
 #include "Events/EndClinicalEvent.h"
 #include "Events/MatureGametocyteEvent.h"
 #include "Events/MoveParasiteToBloodEvent.h"
@@ -250,10 +248,8 @@ void Model::initialize_object_pool(const int &size) {
 
   BirthdayEvent::InitializeObjectPool(size);
   ProgressToClinicalEvent::InitializeObjectPool(size);
-  EndClinicalDueToDrugResistanceEvent::InitializeObjectPool(size);
   UpdateWhenDrugIsPresentEvent::InitializeObjectPool(size);
   EndClinicalEvent::InitializeObjectPool(size);
-  EndClinicalByNoTreatmentEvent::InitializeObjectPool(size);
   MatureGametocyteEvent::InitializeObjectPool(size);
   MoveParasiteToBloodEvent::InitializeObjectPool(size);
   UpdateEveryKDaysEvent::InitializeObjectPool(size);
@@ -302,10 +298,8 @@ void Model::release_object_pool() {
   UpdateEveryKDaysEvent::ReleaseObjectPool();
   MoveParasiteToBloodEvent::ReleaseObjectPool();
   MatureGametocyteEvent::ReleaseObjectPool();
-  EndClinicalByNoTreatmentEvent::ReleaseObjectPool();
   EndClinicalEvent::ReleaseObjectPool();
   UpdateWhenDrugIsPresentEvent::ReleaseObjectPool();
-  EndClinicalDueToDrugResistanceEvent::ReleaseObjectPool();
   ProgressToClinicalEvent::ReleaseObjectPool();
   BirthdayEvent::ReleaseObjectPool();
 }

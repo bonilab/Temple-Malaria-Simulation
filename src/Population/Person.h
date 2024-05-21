@@ -224,12 +224,8 @@ public:
   void schedule_end_clinical_event(
       ClonalParasitePopulation* clinical_caused_parasite);
 
-  void schedule_end_clinical_by_no_treatment_event(
+  void schedule_clinical_recrudesence_event(
       ClonalParasitePopulation* clinical_caused_parasite);
-
-  void schedule_relapse_event(
-      ClonalParasitePopulation* clinical_caused_parasite,
-      const int &time_until_relapse);
 
   void schedule_move_parasite_to_blood(Genotype* genotype, const int &time);
 
@@ -240,7 +236,7 @@ public:
 
   void change_state_when_no_parasite_in_blood();
 
-  void determine_relapse_or_not(
+  void determine_symptomatic_recrudescence(
       ClonalParasitePopulation* clinical_caused_parasite);
 
   void determine_clinical_or_not(

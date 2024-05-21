@@ -23,44 +23,46 @@ UpdateWhenDrugIsPresentEvent::UpdateWhenDrugIsPresentEvent()
 UpdateWhenDrugIsPresentEvent::~UpdateWhenDrugIsPresentEvent() = default;
 
 void UpdateWhenDrugIsPresentEvent::schedule_event(
-    Scheduler* scheduler, Person* p,
+    Scheduler* scheduler, Person* person,
     ClonalParasitePopulation* clinical_caused_parasite, const int &time) {
   if (scheduler != nullptr) {
-    auto* e = new UpdateWhenDrugIsPresentEvent();
-    e->dispatcher = p;
-    e->set_clinical_caused_parasite(clinical_caused_parasite);
-    e->time = time;
+    auto* event = new UpdateWhenDrugIsPresentEvent();
+    event->dispatcher = person;
+    event->set_clinical_caused_parasite(clinical_caused_parasite);
+    event->time = time;
 
-    p->add(e);
-    scheduler->schedule_individual_event(e);
+    person->add(event);
+    scheduler->schedule_individual_event(event);
   }
 }
 
 void UpdateWhenDrugIsPresentEvent::execute() {
   auto* person = dynamic_cast<Person*>(dispatcher);
+
+  // Check if there are drugs in the blood
   if (person->drugs_in_blood()->size() > 0) {
     if (person->all_clonal_parasite_populations()->contain(
             clinical_caused_parasite_)
-        && person->host_state() == Person::CLINICAL) {
-      if (clinical_caused_parasite_->last_update_log10_parasite_density()
-          <= Model::CONFIG->parasite_density_level()
-                 .log_parasite_density_asymptomatic) {
-        person->set_host_state(Person::ASYMPTOMATIC);
-      }
+        && person->host_state() == Person::CLINICAL
+        && clinical_caused_parasite_->last_update_log10_parasite_density()
+               <= Model::CONFIG->parasite_density_level()
+                      .log_parasite_density_asymptomatic) {
+      person->set_host_state(Person::ASYMPTOMATIC);
     }
+    // Schedule update by drug event
     person->schedule_update_by_drug_event(clinical_caused_parasite_);
   } else {
-    //        no drug in blood, reset the status of drug Update parasite
-    // the drug update parasite is inserted into blood when  there is still drug
-    // in blood and also the clinical cause parasite
-
+    // no drug in blood, reset the status of drug Update parasite
     for (auto i = 0; i < person->all_clonal_parasite_populations()->size();
          i++) {
-      const auto blood_parasite =
+      auto* const blood_parasite =
           person->all_clonal_parasite_populations()->parasites()->at(i);
+      // Check if the update function matches having drug update function
       if (blood_parasite->update_function()
           == Model::MODEL->having_drug_update_function()) {
-        person->determine_relapse_or_not(blood_parasite);
+        blood_parasite->set_update_function(
+            Model::MODEL->immunity_clearance_update_function());
+        // person->determine_symptomatic_recrudescence(blood_parasite);
       }
     }
   }

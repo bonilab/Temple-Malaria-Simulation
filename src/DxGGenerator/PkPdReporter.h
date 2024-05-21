@@ -8,6 +8,8 @@
 #ifndef PKPDREPORTER_H
 #define PKPDREPORTER_H
 
+#include <fstream>
+
 #include "Core/PropertyMacro.h"
 #include "Core/TypeDef.h"
 #include "Reporters/Reporter.h"
@@ -18,6 +20,9 @@ class PkPdReporter : public Reporter {
   PROPERTY_REF(DoubleVector, yesterday_density)
 
 public:
+  std::string prefix;
+  std::ofstream parasitaemia_file;
+
   PkPdReporter();
 
   //    PkPdReporter(const PkPdReporter& orig);
@@ -30,8 +35,6 @@ public:
   void after_run() override;
 
   void begin_time_step() override;
-
-  virtual void after_time_step();
 
   void monthly_report() override;
 

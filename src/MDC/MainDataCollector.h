@@ -166,6 +166,10 @@ class MainDataCollector {
   // Monthly treatments by location
   PROPERTY_REF(IntVector, monthly_number_of_treatment_by_location);
 
+  // Monthly recrudescense treatments by location
+  PROPERTY_REF(IntVector,
+               monthly_number_of_recrudescence_treatment_by_location);
+
   // Monthly number of treatments by location and age class
   PROPERTY_REF(IntVector2, monthly_number_of_treatment_by_location_age_class);
 
@@ -257,6 +261,11 @@ public:
   // Record that one treatment has been given
   void record_1_treatment(const int &location, const int &age_class,
                           const int &therapy_id);
+
+  // Record that one treatment has been given
+  void record_1_recrudescence_treatment(const int &location,
+                                        const int &age_class,
+                                        const int &therapy_id);
 
   // Records one case in which the individual did not receive treatment
   void record_1_non_treated_case(const int &location, const int &age_class);

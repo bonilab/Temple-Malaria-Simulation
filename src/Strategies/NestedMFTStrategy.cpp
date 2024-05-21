@@ -12,12 +12,12 @@ void NestedMFTStrategy::add_strategy(IStrategy* strategy) {
 void NestedMFTStrategy::add_therapy(Therapy* therapy) {}
 
 Therapy* NestedMFTStrategy::get_therapy(Person* person) {
-  const auto p = Model::RANDOM->random_flat(0.0, 1.0);
+  const auto probability = Model::RANDOM->random_flat(0.0, 1.0);
 
   double sum = 0;
   for (std::size_t i = 0; i < distribution.size(); i++) {
     sum += distribution[i];
-    if (p <= sum) { return strategy_list[i]->get_therapy(person); }
+    if (probability <= sum) { return strategy_list[i]->get_therapy(person); }
   }
   return strategy_list[strategy_list.size() - 1]->get_therapy(person);
 }
@@ -26,7 +26,7 @@ std::string NestedMFTStrategy::to_string() const {
   std::stringstream sstm;
   sstm << id() << "-" << name() << "-";
 
-  for (auto i : distribution) { sstm << i << "::"; }
+  for (auto dist : distribution) { sstm << dist << "::"; }
   return sstm.str();
 }
 

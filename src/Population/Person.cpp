@@ -18,7 +18,6 @@
 #include "Core/Random.h"
 #include "DrugsInBlood.h"
 #include "Events/CirculateToTargetLocationNextDayEvent.h"
-#include "Events/EndClinicalByNoTreatmentEvent.h"
 #include "Events/EndClinicalEvent.h"
 #include "Events/MatureGametocyteEvent.h"
 #include "Events/MoveParasiteToBloodEvent.h"
@@ -61,6 +60,7 @@ Person::Person()
       all_clonal_parasite_populations_(nullptr),
       drugs_in_blood_(nullptr),
       today_infections_(nullptr),
+      lastest_time_received_public_sector_treatment_(-30),
 #ifdef ENABLE_TRAVEL_TRACKING
       day_that_last_trip_was_initiated_(-1),
       day_that_last_trip_outside_district_was_initiated_(-1),
@@ -296,7 +296,7 @@ bool Person::will_progress_to_death_when_receive_treatment() {
   // 90% lower than no treatment
   return P <= Model::CONFIG
                       ->mortality_when_treatment_fail_by_age_class()[age_class_]
-                  * (1 - 0.9);
+                  * 0.1;
 }
 
 void Person::schedule_progress_to_clinical_event_by(
@@ -312,6 +312,7 @@ void Person::schedule_progress_to_clinical_event_by(
 void Person::schedule_test_treatment_failure_event(
     ClonalParasitePopulation* blood_parasite, const int &testing_day,
     const int &t_id) {
+  // std::cout << "Person::schedule_test_treatment_failure_event" << std::endl;
   TestTreatmentFailureEvent::schedule_event(
       Model::SCHEDULER, this, blood_parasite,
       Model::SCHEDULER->current_time() + testing_day, t_id);
@@ -343,7 +344,7 @@ int Person::complied_dosing_days(const SCTherapy* therapy) {
 // event of one.
 void Person::receive_therapy(Therapy* therapy,
                              ClonalParasitePopulation* clinical_caused_parasite,
-                             bool is_mac_therapy) {
+                             bool is_mac_therapy, bool is_public_sector) {
   // Start by checking if this is a simple therapy with a single dosing regime
   auto* sc_therapy = dynamic_cast<SCTherapy*>(therapy);
   if (sc_therapy != nullptr) {
@@ -389,6 +390,11 @@ void Person::receive_therapy(Therapy* therapy,
   }
 
   last_therapy_id_ = therapy->id();
+
+  if (is_public_sector) {
+    lastest_time_received_public_sector_treatment_ =
+        Model::SCHEDULER->current_time();
+  }
 }
 
 void Person::receive_therapy(SCTherapy* sc_therapy, bool is_mac_therapy) {
@@ -467,16 +473,6 @@ void Person::schedule_end_clinical_event(
       Model::SCHEDULER->current_time() + dClinical);
 }
 
-void Person::schedule_end_clinical_by_no_treatment_event(
-    ClonalParasitePopulation* clinical_caused_parasite) {
-  auto d_clinical = Model::RANDOM->random_normal(7, 2);
-  d_clinical = std::min<int>(std::max<int>(d_clinical, 5), 14);
-
-  EndClinicalByNoTreatmentEvent::schedule_event(
-      Model::SCHEDULER, this, clinical_caused_parasite,
-      Model::SCHEDULER->current_time() + d_clinical);
-}
-
 void Person::change_state_when_no_parasite_in_blood() {
   if (all_clonal_parasite_populations_->size() == 0) {
     if (liver_parasite_type_ == nullptr) {
@@ -488,30 +484,122 @@ void Person::change_state_when_no_parasite_in_blood() {
   }
 }
 
-void Person::determine_relapse_or_not(
+/**
+ * Calculate the probability of developing clinical symptoms in recrudescent
+ * infections based on malaria prevalence (PfPR2-10) and whether the trial
+ * enrolled only young children.
+ *
+ * Parameters are taken from the paper:
+ * Mumtaz, R., Okell, L.C. & Challenger, J.D. Asymptomatic recrudescence after
+ * artemether–lumefantrine treatment for uncomplicated falciparum malaria: a
+ * systematic review and meta-analysis. Malar J 19, 453 (2020).
+ * https://doi.org/10.1186/s12936-020-03520-1
+ *
+ * @param pfpr Malaria prevalence (PfPR2-10) as a percentage (e.g., 10 for 10%)
+ * @param enrollYoungChildren Boolean indicating if the trial enrolled only
+ * young children
+ * @return Probability of symptomatic recrudescences as a percentage
+ */
+double calculate_symptomaticrecrudescence_probability(
+    double pfpr, bool isYoungChildren = false) {
+  // Base probability for adults at 0% PfPR
+  const double baseProbability = 52.0;
+
+  // Calculate the odds ratio reduction for increase in PfPR
+  const double reductionFactor = 1.17;
+  const double oddRationFactorForYoungChildren = 1.61;
+
+  // Calculate the odds for the given PfPR
+  double oddsRatio = pow((1 / reductionFactor), (pfpr / 10));
+
+  if (isYoungChildren) {
+    // Adjust odds ratio for young children
+    oddsRatio *= oddRationFactorForYoungChildren;
+  }
+
+  // Convert odds ratio back to probability
+  double baseOdds = baseProbability / (100 - baseProbability);
+  double newOdds = baseOdds * oddsRatio;
+  double probability = newOdds / (1 + newOdds);
+
+  return probability;
+}
+
+void Person::determine_symptomatic_recrudescence(
     ClonalParasitePopulation* clinical_caused_parasite) {
-  if (all_clonal_parasite_populations_->contain(clinical_caused_parasite)) {
-    const auto p = Model::RANDOM->random_flat(0.0, 1.0);
+  const auto random_p = Model::RANDOM->random_flat(0.0, 1.0);
 
-    if (p <= Model::CONFIG->p_relapse()) {
-      // progress to clinical after several days
-      clinical_caused_parasite->set_update_function(
-          Model::MODEL->progress_to_clinical_update_function());
-      clinical_caused_parasite->set_last_update_log10_parasite_density(
-          Model::CONFIG->parasite_density_level()
-              .log_parasite_density_asymptomatic);
-      schedule_relapse_event(clinical_caused_parasite,
-                             Model::CONFIG->relapse_duration());
+  // TODO: cache pfpr2_10 to avoid recalculating it
+  // const auto pfpr =
+  //     Model::MAIN_DATA_COLLECTOR->get_blood_slide_prevalence(location(), 2,
+  //     10)
+  //     * 100;
 
-    } else {
-      // progress to clearance
-      if (clinical_caused_parasite->last_update_log10_parasite_density()
-          > Model::CONFIG->parasite_density_level()
-                .log_parasite_density_asymptomatic) {
-        clinical_caused_parasite->set_last_update_log10_parasite_density(
+  const auto pfpr = Model::MAIN_DATA_COLLECTOR
+                        ->blood_slide_prevalence_by_location()[location_]
+                    * 100;
+
+  const auto isYoungChildren = age() <= 6;
+
+  const auto probability_develop_symptom =
+      calculate_symptomaticrecrudescence_probability(pfpr, isYoungChildren);
+
+  if (random_p <= probability_develop_symptom) {
+    // The last clinical caused parasite is going to relapse
+    // regardless whether the induvidual are under treatment or not
+    // Set the update function to progress to clinical
+    clinical_caused_parasite->set_update_function(
+        Model::MODEL->progress_to_clinical_update_function());
+
+    // Set the last update parasite density to the asymptomatic level
+
+    clinical_caused_parasite->set_last_update_log10_parasite_density(
+        Model::RANDOM->random_normal_truncated(
             Model::CONFIG->parasite_density_level()
-                .log_parasite_density_asymptomatic);
+                .log_parasite_density_asymptomatic,
+            0.1));
+    // clinical_caused_parasite->set_last_update_log10_parasite_density(
+    //     Model::CONFIG->parasite_density_level()
+    //         .log_parasite_density_asymptomatic);
+    // Schedule a relapse event
+    schedule_clinical_recrudescence_event(clinical_caused_parasite);
+
+    this->recrudescence_status = Person::RecrudescenceState::WITH_SYMPTOM;
+    // mark the test treatment failure event as a failure
+    for (auto* event : *events()) {
+      auto* tf_event = dynamic_cast<TestTreatmentFailureEvent*>(event);
+      if (tf_event != nullptr
+          && tf_event->clinical_caused_parasite() == clinical_caused_parasite) {
+        event->executable = false;
+        Model::MAIN_DATA_COLLECTOR->record_1_treatment_failure_by_therapy(
+            location_, age_class_, tf_event->therapyId());
       }
+    }
+
+  } else {
+    // continue the assymptomatic state with either having drug or immunity
+
+    this->recrudescence_status = Person::RecrudescenceState::WITHOUT_SYMPTOM;
+
+    // If the last update parasite density is greater than the asymptomatic
+    // level, adjust it. We don't want to have high parasitaemia yn
+    // asymptomatic
+    if (clinical_caused_parasite->last_update_log10_parasite_density()
+        > Model::CONFIG->parasite_density_level()
+              .log_parasite_density_asymptomatic) {
+      clinical_caused_parasite->set_last_update_log10_parasite_density(
+          Model::RANDOM->random_normal_truncated(
+              Model::CONFIG->parasite_density_level()
+                  .log_parasite_density_asymptomatic,
+              0.1));
+    }
+
+    if (drugs_in_blood_->size() > 0) {
+      // Set the update function to having drug
+      clinical_caused_parasite->set_update_function(
+          Model::MODEL->having_drug_update_function());
+    } else {
+      // Set the update function to immunity clearance
       clinical_caused_parasite->set_update_function(
           Model::MODEL->immunity_clearance_update_function());
     }
@@ -521,18 +609,21 @@ void Person::determine_relapse_or_not(
 void Person::determine_clinical_or_not(
     ClonalParasitePopulation* clinical_caused_parasite) {
   if (all_clonal_parasite_populations_->contain(clinical_caused_parasite)) {
-    const auto p = Model::RANDOM->random_flat(0.0, 1.0);
+    const auto clinical_probability = Model::RANDOM->random_flat(0.0, 1.0);
 
-    if (p <= get_probability_progress_to_clinical()) {
+    if (clinical_probability <= get_probability_progress_to_clinical()) {
       // progress to clinical after several days
       clinical_caused_parasite->set_update_function(
           Model::MODEL->progress_to_clinical_update_function());
       clinical_caused_parasite->set_last_update_log10_parasite_density(
-          Model::CONFIG->parasite_density_level()
-              .log_parasite_density_asymptomatic);
-      schedule_relapse_event(clinical_caused_parasite,
-                             Model::CONFIG->relapse_duration());
-
+          Model::RANDOM->random_normal_truncated(
+              Model::CONFIG->parasite_density_level()
+                  .log_parasite_density_asymptomatic,
+              0.1));
+      // clinical_caused_parasite->set_last_update_log10_parasite_density(
+      //     Model::CONFIG->parasite_density_level()
+      //         .log_parasite_density_asymptomatic);
+      schedule_progress_to_clinical_event_by(clinical_caused_parasite);
     } else {
       // progress to clearance
 
@@ -542,15 +633,16 @@ void Person::determine_clinical_or_not(
   }
 }
 
-void Person::schedule_relapse_event(
-    ClonalParasitePopulation* clinical_caused_parasite,
-    const int &time_until_relapse) {
-  int duration = Model::RANDOM->random_normal(time_until_relapse, 15);
-  duration = std::min<int>(std::max<int>(duration, time_until_relapse - 15),
-                           time_until_relapse + 15);
+void Person::schedule_clinical_recrudescence_event(
+    ClonalParasitePopulation* clinical_caused_parasite) {
+  // assumming the onset of clinical symptoms is day 14 to 63 and end of
+  // clinical symptom is day 7.
+  int days_to_clinical = Model::RANDOM->random_normal(14, 5);
+  days_to_clinical = std::min<int>(std::max<int>(days_to_clinical, 7), 54);
+
   ProgressToClinicalEvent::schedule_event(
       Model::SCHEDULER, this, clinical_caused_parasite,
-      Model::SCHEDULER->current_time() + duration);
+      Model::SCHEDULER->current_time() + days_to_clinical);
 }
 
 void Person::update() {
@@ -696,11 +788,11 @@ void Person::randomly_choose_target_location() {
     // already chose
     return;
   }
-  int target_location =
-      today_target_locations_->size() == 1
-          ? today_target_locations_->front()
-          : today_target_locations_->at(static_cast<int>(
-              Model::RANDOM->random_uniform(today_target_locations_->size())));
+  int target_location = today_target_locations_->size() == 1
+                            ? today_target_locations_->front()
+                            : today_target_locations_->at(static_cast<int>(
+                                  Model::RANDOM->random_uniform(
+                                      today_target_locations_->size())));
 
 
   schedule_move_to_target_location_next_day_event(target_location);

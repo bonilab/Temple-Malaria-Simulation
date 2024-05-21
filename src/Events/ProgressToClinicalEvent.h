@@ -19,6 +19,8 @@ class Scheduler;
 
 class ClonalParasitePopulation;
 
+class Therapy;
+
 class ProgressToClinicalEvent : public Event {
   OBJECTPOOL(ProgressToClinicalEvent)
 
@@ -31,15 +33,21 @@ public:
 
   ~ProgressToClinicalEvent() override;
 
-  static void schedule_event(Scheduler* scheduler, Person* p,
+  static void schedule_event(Scheduler* scheduler, Person* person,
                              ClonalParasitePopulation* clinical_caused_parasite,
                              const int &time);
 
-  static void receive_no_treatment_routine(Person* p);
+  static void receive_no_treatment_routine(Person* person);
 
   std::string name() override { return "ProgressToClinicalEvent"; }
 
 private:
+  void transition_to_clinical_state(Person* person);
+  static std::tuple<Therapy*, bool> determine_therapy(
+      Person* person, bool is_recurrence = false);
+  void apply_therapy(Person* person, Therapy* therapy,
+                     bool is_public_sector = true);
+
   void execute() override;
 };
 

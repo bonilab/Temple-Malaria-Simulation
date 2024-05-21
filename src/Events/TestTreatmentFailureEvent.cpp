@@ -45,6 +45,8 @@ void TestTreatmentFailureEvent::execute() {
       && clinical_caused_parasite_->last_update_log10_parasite_density()
              > Model::CONFIG->parasite_density_level()
                    .log_parasite_density_detectable) {
+    // std::cout << "Treatment failure" << std::endl;
+
     Model::MAIN_DATA_COLLECTOR->record_1_treatment_failure_by_therapy(
         person->location(), person->age_class(), therapyId_);
   } else {

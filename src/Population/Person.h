@@ -74,6 +74,8 @@ public:
     NUMBER_OF_STATE = 5
   };
 
+  enum RecrudescenceState { NONE = 0, WITHOUT_SYMPTOM = 1, WITH_SYMPTOM = 2 };
+
   OBJECTPOOL(Person)
 
   DELETE_COPY_AND_MOVE(Person)
@@ -120,6 +122,8 @@ public:
 
   PROPERTY_REF(int, last_therapy_id)
 
+  PROPERTY_REF(int, lastest_time_received_public_sector_treatment)
+
   PROPERTY_REF(std::vector<double>, prob_present_at_mda_by_age)
 
 #ifdef ENABLE_TRAVEL_TRACKING
@@ -128,6 +132,7 @@ public:
 #endif
 
 private:
+  // TODO: remove the unnecessary _uid
   // The UID is generated each time the person is initialized
   ul_uid _uid = -1;
 
@@ -141,6 +146,7 @@ private:
   static int complied_dosing_days(const SCTherapy* therapy);
 
 public:
+  RecrudescenceState recrudescence_status{NONE};
   Person();
   ~Person() override;
 
@@ -206,7 +212,8 @@ public:
 
   void receive_therapy(Therapy* therapy,
                        ClonalParasitePopulation* clinical_caused_parasite,
-                       bool is_mac_therapy = false);
+                       bool is_mac_therapy = false,
+                       bool is_public_sector = true);
 
   void add_drug_to_blood(DrugType* dt, const int &dosing_days,
                          bool is_mac_therapy);
@@ -224,12 +231,8 @@ public:
   void schedule_end_clinical_event(
       ClonalParasitePopulation* clinical_caused_parasite);
 
-  void schedule_end_clinical_by_no_treatment_event(
+  void schedule_clinical_recrudescence_event(
       ClonalParasitePopulation* clinical_caused_parasite);
-
-  void schedule_relapse_event(
-      ClonalParasitePopulation* clinical_caused_parasite,
-      const int &time_until_relapse);
 
   void schedule_move_parasite_to_blood(Genotype* genotype, const int &time);
 
@@ -240,7 +243,7 @@ public:
 
   void change_state_when_no_parasite_in_blood();
 
-  void determine_relapse_or_not(
+  void determine_symptomatic_recrudescence(
       ClonalParasitePopulation* clinical_caused_parasite);
 
   void determine_clinical_or_not(

@@ -14,7 +14,7 @@ public:
 
   ChangeStrategyEvent(const int &at_time, const int &strategy_id);
 
-  virtual ~ChangeStrategyEvent() = default;
+  ~ChangeStrategyEvent() override = default;
 
   std::string name() override { return "ChangeStrategyEvent"; }
 

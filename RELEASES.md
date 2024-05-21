@@ -6,6 +6,26 @@ dictate the features currently under development.
 
 ## Change Log
 
+### Version 4.x.x
+
+Version 4.x.x implements the recrudescence feature:
+
+1. Core recrudescence functionality:
+
+   - Implemented recrudescence feature in person class
+   - Updated clinical state duration for recrudescence
+   - Added calculation of symptomatic recrudescence probability
+   - Modified clinical progression to incorporate recrudescence
+   - Updated treatment events to handle recrudescence cases
+
+2. Code improvements:
+   - Removed obsolete events for ending clinical episodes
+   - Removed unused functions in person class
+   - Streamlined clinical progression logic
+   - Enhanced treatment event handling
+
+These changes improve the biological realism of the simulation by incorporating recrudescence, a key feature of malaria infections where symptoms may return without new infection.
+
 ### Version 4.2.0
 
 See [Version 4.2.0 Release Notes](version_4.2.0.md) for details about the multi-level administrative boundaries update.
@@ -15,6 +35,7 @@ See [Version 4.2.0 Release Notes](version_4.2.0.md) for details about the multi-
 Version 4.1.10 improves memory management and code quality:
 
 1. Enhanced SpatialData implementation with modern C++ practices:
+
    - Replaced raw pointer array with std::array of std::unique_ptr
    - Improved memory management with RAII principles
    - Better error handling and null pointer checks
@@ -28,21 +49,25 @@ Version 4.1.10 improves memory management and code quality:
    - Enhanced location generation with better error handling and logging
 
 2. Major improvements to district handling:
+
    - Direct district ID indexing without adjustments
    - Support for both 0-based and 1-based district IDs
    - Pre-computed bidirectional mappings:
-     * location_to_district for O(1) district lookups
-     * district_to_locations for efficient location retrieval
+     - location_to_district for O(1) district lookups
+     - district_to_locations for efficient location retrieval
    - Eliminated redundant district index translations
    - Better handling of district boundaries and validation
    - Improved district presence checks using district_count
 
 3. Code quality improvements:
+
    - Replaced raw pointers with std::vector throughout the codebase
    - Removed manual memory management in AscFile and movement models
+   - Eliminated potential memory leaks
    - Improved move semantics for better performance
    - Enhanced error handling with more specific error messages
    - Better const correctness and type safety
+   - More consistent error handling
    - Simplified district lookup logic
    - Reduced code duplication
    - Clearer separation between raster and non-raster data paths
@@ -52,7 +77,8 @@ Version 4.1.10 improves memory management and code quality:
    - Improved test organization and reduced redundancy
 
 4. Performance considerations:
-   - Optimized data structures using std::vector
+
+   - Optimized data structures using std::vector and improved pointer access patterns
    - Reduced overhead from manual memory management
    - Improved move semantics for large data transfers
    - Cache-friendly data structures
@@ -62,6 +88,7 @@ Version 4.1.10 improves memory management and code quality:
    - Simplified raster state tracking
 
 5. Add UnitTest for SpatialData and SeasonalPattern:
+
    - Better organized test cases
    - Separated file loading and data access tests
    - Improved test setup and teardown
@@ -83,31 +110,34 @@ These changes improve the robustness and maintainability of the spatial data han
 Version 4.1.9 enhances the seasonal modeling capabilities by adding district-specific seasonal patterns:
 
 1. Enhanced SeasonalPattern implementation to support district-specific patterns:
+
    - Added support for both monthly (12 values) and daily (365 values) seasonal factors per district
    - Automatic conversion from monthly to daily data during initialization
    - Input via CSV file with format: `district_id,factor1,factor2,...,factor12|365`
    - Proper handling of leap years in seasonal calculations
    - Integration with district mapping from SpatialData
    - Robust error handling for:
-     * Missing or invalid district data
-     * Malformed CSV files
-     * Negative seasonal factors
-     * Non-existent input files
-     * Incorrect number of values (must be exactly 12 for monthly or 365 for daily)
+     - Missing or invalid district data
+     - Malformed CSV files
+     - Negative seasonal factors
+     - Non-existent input files
+     - Incorrect number of values (must be exactly 12 for monthly or 365 for daily)
 
 2. Configuration example for district-specific seasonal patterns:
+
 ```yaml
 seasonal_info:
   enable: true
   mode: "PATTERN"
   pattern:
     filename: "district_seasonal_factors.csv"
-    period: 12  # or 365 for daily data
+    period: 12 # or 365 for daily data
 ```
 
 The CSV input file format can be either monthly or daily:
 
 For monthly data (12 values per district):
+
 ```csv
 district_id,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec
 1,0.5,0.55,0.6,0.65,0.7,0.8,0.9,0.85,0.7,0.65,0.6,0.55
@@ -115,11 +145,13 @@ district_id,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec
 ```
 
 For monthly data:
+
 - Values are automatically expanded to daily values
 - Each month's value is repeated for all days in that month
 - Accounts for varying month lengths (28/29 for February, 30/31 for others)
 
 For daily data (365 values per district):
+
 ```csv
 district_id,day1,day2,day3,day4,day5,...,day364,day365
 1,0.5,0.51,0.52,0.53,0.54,...,0.52,0.51
@@ -127,6 +159,7 @@ district_id,day1,day2,day3,day4,day5,...,day364,day365
 ```
 
 Notes:
+
 - For leap years (day 366), the simulation will use the same value as day 365
 - All seasonal factors must be non-negative
 - District IDs must match those in the spatial configuration

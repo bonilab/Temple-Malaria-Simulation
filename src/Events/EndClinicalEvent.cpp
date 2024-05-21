@@ -20,21 +20,21 @@ EndClinicalEvent::EndClinicalEvent() : clinical_caused_parasite_(nullptr) {}
 EndClinicalEvent::~EndClinicalEvent() = default;
 
 void EndClinicalEvent::schedule_event(
-    Scheduler* scheduler, Person* p,
+    Scheduler* scheduler, Person* person,
     ClonalParasitePopulation* clinical_caused_parasite, const int &time) {
   if (scheduler != nullptr) {
-    auto* e = new EndClinicalEvent();
-    e->dispatcher = p;
-    e->set_clinical_caused_parasite(clinical_caused_parasite);
-    e->time = time;
+    auto* event = new EndClinicalEvent();
+    event->dispatcher = person;
+    event->set_clinical_caused_parasite(clinical_caused_parasite);
+    event->time = time;
 
-    p->add(e);
-    scheduler->schedule_individual_event(e);
+    person->add(event);
+    scheduler->schedule_individual_event(event);
   }
 }
 
 void EndClinicalEvent::execute() {
-  auto person = dynamic_cast<Person*>(dispatcher);
+  auto* person = dynamic_cast<Person*>(dispatcher);
 
   if (person->all_clonal_parasite_populations()->size() == 0) {
     person->change_state_when_no_parasite_in_blood();
@@ -44,6 +44,18 @@ void EndClinicalEvent::execute() {
     person->immune_system()->set_increase(true);
     person->set_host_state(Person::ASYMPTOMATIC);
 
-    person->determine_relapse_or_not(clinical_caused_parasite_);
+    if (person->all_clonal_parasite_populations()->contain(
+            clinical_caused_parasite_)) {
+      auto log_parasite_density =
+          clinical_caused_parasite_->last_update_log10_parasite_density();
+
+      // becase the current model does not have within host dynamics, so we
+      // assume that the threshold for the parasite density to re-appear in
+      // blood is 100 per uL
+      const bool isHigherThanRecrudescenceThreshold = log_parasite_density > 2;
+      if (isHigherThanRecrudescenceThreshold) {
+        person->determine_symptomatic_recrudescence(clinical_caused_parasite_);
+      }
+    }
   }
 }

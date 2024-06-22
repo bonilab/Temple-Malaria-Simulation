@@ -39,6 +39,9 @@ public:
   static std::vector<Event*> build_change_treatment_strategy_event(
       const YAML::Node &node, Config* config);
 
+  static std::vector<Event*> build_change_recrudescence_treatment_event(
+      const YAML::Node &node, Config* config);
+
   static std::vector<Event*> build_single_round_mda_event(
       const YAML::Node &node, Config* config);
 

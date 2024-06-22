@@ -67,6 +67,9 @@ void SQLiteDistrictReporter::collect_site_data_for_location(int location) {
   monthly_site_data.treatments[district] +=
       Model::MAIN_DATA_COLLECTOR
           ->monthly_number_of_treatment_by_location()[location];
+  monthly_site_data.recrudescence_treatments[district] +=
+      Model::MAIN_DATA_COLLECTOR
+          ->monthly_number_of_recrudescence_treatment_by_location()[location];
   monthly_site_data.treatment_failures[district] +=
       Model::MAIN_DATA_COLLECTOR
           ->monthly_treatment_failure_by_location()[location];
@@ -159,15 +162,16 @@ void SQLiteDistrictReporter::calculate_and_build_up_site_data_insert_values(
       singleRow += fmt::format(", {}", episodes);
     }
 
-    singleRow += fmt::format(", {}, {}, {}, {}, {}, {}, {}, {}, {}, {})",
-                             monthly_site_data.treatments[district],
-                             calculatedEir, calculatedPfprUnder5,
-                             calculatedPfpr2to10, calculatedPfprAll,
-                             monthly_site_data.infections_by_district[district],
-                             monthly_site_data.treatment_failures[district],
-                             monthly_site_data.nontreatment[district],
-                             monthly_site_data.treatments_under5[district],
-                             monthly_site_data.treatments_over5[district]);
+    singleRow += fmt::format(
+        ", {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})",
+        monthly_site_data.treatments[district],
+        monthly_site_data.recrudescence_treatments[district], calculatedEir,
+        calculatedPfprUnder5, calculatedPfpr2to10, calculatedPfprAll,
+        monthly_site_data.infections_by_district[district],
+        monthly_site_data.treatment_failures[district],
+        monthly_site_data.nontreatment[district],
+        monthly_site_data.treatments_under5[district],
+        monthly_site_data.treatments_over5[district]);
 
     insert_values.push_back(singleRow);
   }
@@ -231,6 +235,7 @@ void SQLiteDistrictReporter::reset_site_data_structures(int numDistricts,
   monthly_site_data.clinical_episodes_by_age_class.assign(
       numDistricts, std::vector<int>(numAgeClasses, 0));
   monthly_site_data.treatments.assign(numDistricts, 0);
+  monthly_site_data.recrudescence_treatments.assign(numDistricts, 0);
   monthly_site_data.treatment_failures.assign(numDistricts, 0);
   monthly_site_data.nontreatment.assign(numDistricts, 0);
   monthly_site_data.treatments_under5.assign(numDistricts, 0);

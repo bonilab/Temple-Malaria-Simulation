@@ -26,8 +26,6 @@
 
 INITIALIZE_EASYLOGGINGPP
 
-using namespace std;
-
 double getEfficacyForTherapy(Genotype* g, int therapy_id, Model* p_model);
 
 void create_cli_option(CLI::App &app);
@@ -177,7 +175,7 @@ double getEfficacyForTherapy(Genotype* g, int therapy_id, Model* p_model) {
     blood_parasite->set_last_update_log10_parasite_density(density);
 
     ProgressToClinicalEvent::schedule_event(Model::SCHEDULER, person,
-                                            blood_parasite, 0);
+                                            blood_parasite, false, 0);
   }
 
   p_model->run();

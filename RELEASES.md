@@ -6,6 +6,23 @@ dictate the features currently under development.
 
 ## Change Log
 
+### Version 4.2.0(dev): Recrudescence
+
+feat: implement recrudescence feature
+
+CHANGES:
+
+- Implemented recrudescence feature
+- Removed obsolete events for ending clinical episodes
+- Added recrudescence logic to person class
+- Adjusted clinical state duration for recrudescence
+- Updated calculation of symptomatic recrudescence probability
+- Modified clinical progression to incorporate recrudescence
+- Removed unused function in person class
+- Updated calculation for symptomatic recrudescence probability
+- Adjusted clinical progression to incorporate recrudescence
+- Updated treatment events to incorporate recrudescence
+
 ### Version 4.1.8
 
 Version 4.1.8 is currently in progress and will update the simuation to run in the compute environment at Temple University,

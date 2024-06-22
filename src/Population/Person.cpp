@@ -305,7 +305,7 @@ void Person::schedule_progress_to_clinical_event_by(
                                 : Model::CONFIG->days_to_clinical_over_five();
 
   ProgressToClinicalEvent::schedule_event(
-      Model::SCHEDULER, this, blood_parasite,
+      Model::SCHEDULER, this, blood_parasite, false,
       Model::SCHEDULER->current_time() + time);
 }
 
@@ -494,8 +494,8 @@ void Person::change_state_when_no_parasite_in_blood() {
  * young children
  * @return Probability of symptomatic recrudescences as a percentage
  */
-double calculate_symptomatic_probability(double pfpr,
-                                         bool isYoungChildren = false) {
+double calculate_symptomaticrecrudescence_probability(
+    double pfpr, bool isYoungChildren = false) {
   // Base probability for adults at 0% PfPR
   const double baseProbability = 52.0;
 
@@ -521,62 +521,59 @@ double calculate_symptomatic_probability(double pfpr,
 
 void Person::determine_symptomatic_recrudescence(
     ClonalParasitePopulation* clinical_caused_parasite) {
-  auto log_parasite_density =
-      clinical_caused_parasite->last_update_log10_parasite_density();
+  const auto random_p = Model::RANDOM->random_flat(0.0, 1.0);
 
-  const bool isHigherThanRecrudesenceThreshold = log_parasite_density > 2;
+  // TODO: cache pfpr2_10 to avoid recalculating it
+  // const auto pfpr =
+  //     Model::MAIN_DATA_COLLECTOR->get_blood_slide_prevalence(location(), 2,
+  //     10)
+  //     * 100;
 
-  if (all_clonal_parasite_populations_->contain(clinical_caused_parasite)
-      && isHigherThanRecrudesenceThreshold) {
-    const auto random_p = Model::RANDOM->random_flat(0.0, 1.0);
+  const auto pfpr = Model::MAIN_DATA_COLLECTOR
+                        ->blood_slide_prevalence_by_location()[location_]
+                    * 100;
 
-    const auto pfpr2_10 =
-        Model::MAIN_DATA_COLLECTOR->get_blood_slide_prevalence(location(), 2,
-                                                               10)
-        * 100;
+  const auto isYoungChildren = age() <= 6;
 
-    const auto isYoungChildren = age() <= 6;
+  const auto probability_develop_symptom =
+      calculate_symptomaticrecrudescence_probability(pfpr, isYoungChildren);
 
-    const auto probability_develop_symptom =
-        calculate_symptomatic_probability(pfpr2_10, isYoungChildren);
+  if (random_p <= probability_develop_symptom) {
+    // The last clinical caused parasite is going to relapse
+    // regardless whether the induvidual are under treatment or not
+    // Set the update function to progress to clinical
+    clinical_caused_parasite->set_update_function(
+        Model::MODEL->progress_to_clinical_update_function());
 
-    if (random_p <= probability_develop_symptom) {
-      // The last clinical caused parasite is going to relapse
-      // regardless whether the induvidual are under treatment or not
-      // Set the update function to progress to clinical
-      clinical_caused_parasite->set_update_function(
-          Model::MODEL->progress_to_clinical_update_function());
+    // Set the last update parasite density to the asymptomatic level
+    clinical_caused_parasite->set_last_update_log10_parasite_density(
+        Model::CONFIG->parasite_density_level()
+            .log_parasite_density_asymptomatic);
+    // Schedule a relapse event
+    schedule_clinical_recrudescence_event(clinical_caused_parasite);
 
-      // Set the last update parasite density to the asymptomatic level
+  } else {
+    // continue the assymptomatic state with either having drug or immunity
+
+    // If the last update parasite density is greater than the asymptomatic
+    // level, adjust it. We don't want to have high parasitaemia yn
+    // asymptomatic
+    if (clinical_caused_parasite->last_update_log10_parasite_density()
+        > Model::CONFIG->parasite_density_level()
+              .log_parasite_density_asymptomatic) {
       clinical_caused_parasite->set_last_update_log10_parasite_density(
           Model::CONFIG->parasite_density_level()
               .log_parasite_density_asymptomatic);
-      // Schedule a relapse event
-      schedule_clinical_recrudesence_event(clinical_caused_parasite);
+    }
 
+    if (drugs_in_blood_->size() > 0) {
+      // Set the update function to having drug
+      clinical_caused_parasite->set_update_function(
+          Model::MODEL->having_drug_update_function());
     } else {
-      // continue the assymptomatic state with either having drug or immunity
-
-      // If the last update parasite density is greater than the asymptomatic
-      // level, adjust it. We don't want to have high parasitaemia yn
-      // asymptomatic
-      if (clinical_caused_parasite->last_update_log10_parasite_density()
-          > Model::CONFIG->parasite_density_level()
-                .log_parasite_density_asymptomatic) {
-        clinical_caused_parasite->set_last_update_log10_parasite_density(
-            Model::CONFIG->parasite_density_level()
-                .log_parasite_density_asymptomatic);
-      }
-
-      if (drugs_in_blood_->size() > 0) {
-        // Set the update function to having drug
-        clinical_caused_parasite->set_update_function(
-            Model::MODEL->having_drug_update_function());
-      } else {
-        // Set the update function to immunity clearance
-        clinical_caused_parasite->set_update_function(
-            Model::MODEL->immunity_clearance_update_function());
-      }
+      // Set the update function to immunity clearance
+      clinical_caused_parasite->set_update_function(
+          Model::MODEL->immunity_clearance_update_function());
     }
   }
 }
@@ -584,9 +581,9 @@ void Person::determine_symptomatic_recrudescence(
 void Person::determine_clinical_or_not(
     ClonalParasitePopulation* clinical_caused_parasite) {
   if (all_clonal_parasite_populations_->contain(clinical_caused_parasite)) {
-    const auto p = Model::RANDOM->random_flat(0.0, 1.0);
+    const auto clinical_probability = Model::RANDOM->random_flat(0.0, 1.0);
 
-    if (p <= get_probability_progress_to_clinical()) {
+    if (clinical_probability <= get_probability_progress_to_clinical()) {
       // progress to clinical after several days
       clinical_caused_parasite->set_update_function(
           Model::MODEL->progress_to_clinical_update_function());
@@ -603,7 +600,7 @@ void Person::determine_clinical_or_not(
   }
 }
 
-void Person::schedule_clinical_recrudesence_event(
+void Person::schedule_clinical_recrudescence_event(
     ClonalParasitePopulation* clinical_caused_parasite) {
   // assumming the onset of clinical symptoms is day 14 to 63 and end of
   // clinical symptom is day 7.
@@ -611,7 +608,7 @@ void Person::schedule_clinical_recrudesence_event(
   days_to_clinical = std::min<int>(std::max<int>(days_to_clinical, 7), 54);
 
   ProgressToClinicalEvent::schedule_event(
-      Model::SCHEDULER, this, clinical_caused_parasite,
+      Model::SCHEDULER, this, clinical_caused_parasite, true,
       Model::SCHEDULER->current_time() + days_to_clinical);
 }
 

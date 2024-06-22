@@ -18,6 +18,7 @@
 #include "ChangeTreatmentCoverageEvent.h"
 #include "Core/Config/Config.h"
 #include "DistrictImportationDailyEvent.h"
+#include "Events/Population/ChangeRecrudescenceTreatmentEvent.h"
 #include "ImportationEvent.h"
 #include "ImportationPeriodicallyEvent.h"
 #include "ImportationPeriodicallyRandomEvent.h"
@@ -33,7 +34,6 @@
 #include "TurnOffMutationEvent.h"
 #include "TurnOnMutationEvent.h"
 #include "UpdateBetaRasterEvent.hxx"
-#include "yaml-cpp/yaml.h"
 
 // Disable data flow analysis (DFA) in CLion
 #pragma clang diagnostic push
@@ -67,7 +67,6 @@ std::vector<Event*>
 PopulationEventBuilder::build_introduce_parasites_periodically_events(
     const YAML::Node &node, Config* config) {
   std::vector<Event*> events;
-
   for (const auto &entry : node) {
     const auto location = entry["location"].as<unsigned long>();
     const unsigned long location_from = location;
@@ -131,8 +130,34 @@ PopulationEventBuilder::build_change_treatment_strategy_event(
       exit(-1);
     }
 
-    auto* e = new ChangeStrategyEvent(time, strategy_id);
-    events.push_back(e);
+    auto* event = new ChangeStrategyEvent(time, strategy_id);
+    events.push_back(event);
+  }
+
+  return events;
+}
+
+std::vector<Event*>
+PopulationEventBuilder::build_change_recrudescence_treatment_event(
+    const YAML::Node &node, Config* config) {
+  std::vector<Event*> events;
+  for (const auto &entry : node) {
+    const auto starting_date = entry["day"].as<date::year_month_day>();
+    auto time = (date::sys_days{starting_date}
+                 - date::sys_days{config->starting_date()})
+                    .count();
+    auto therapy_id = entry["therapy_id"].as<int>();
+
+    // Verify that the strategy id is valid, if not fail
+    if (therapy_id >= config->therapy_db.value_.size()) {
+      LOG(ERROR) << "Invalid therapy_id! " << therapy_id
+                 << " supplied, but therapy_db size is "
+                 << config->therapy_db.value_.size();
+      exit(-1);
+    }
+
+    auto* event = new ChangeRecrudescenceTreatmentEvent(time, therapy_id);
+    events.push_back(event);
   }
 
   return events;
@@ -201,19 +226,19 @@ std::vector<Event*> PopulationEventBuilder::build_single_round_mda_event(
     auto time = (date::sys_days{starting_date}
                  - date::sys_days{config->starting_date()})
                     .count();
-    auto* e = new SingleRoundMDAEvent(time);
+    auto* event = new SingleRoundMDAEvent(time);
     for (std::size_t loc = 0; loc < config->number_of_locations(); loc++) {
       auto input_loc = entry["fraction_population_targeted"].size()
                                < config->number_of_locations()
                            ? 0
                            : loc;
-      e->fraction_population_targeted.push_back(
+      event->fraction_population_targeted.push_back(
           entry["fraction_population_targeted"][input_loc].as<double>());
     }
 
-    e->days_to_complete_all_treatments =
+    event->days_to_complete_all_treatments =
         entry["days_to_complete_all_treatments"].as<int>();
-    events.push_back(e);
+    events.push_back(event);
   }
 
   return events;
@@ -230,8 +255,8 @@ PopulationEventBuilder::build_modify_nested_mft_strategy_event(
                     .count();
     auto strategy_id = entry["strategy_id"].as<int>();
 
-    auto* e = new ModifyNestedMFTEvent(time, strategy_id);
-    events.push_back(e);
+    auto* event = new ModifyNestedMFTEvent(time, strategy_id);
+    events.push_back(event);
   }
 
   return events;
@@ -253,8 +278,9 @@ std::vector<Event*> PopulationEventBuilder::build_turn_on_mutation_event(
 
       int drug_id = entry["drug_id"] ? entry["drug_id"].as<int>() : -1;
 
-      auto* e = new TurnOnMutationEvent(time, mutation_probability, drug_id);
-      events.push_back(e);
+      auto* event =
+          new TurnOnMutationEvent(time, mutation_probability, drug_id);
+      events.push_back(event);
     }
 
     return events;
@@ -274,8 +300,8 @@ std::vector<Event*> PopulationEventBuilder::build_turn_off_mutation_event(
     auto time = (date::sys_days{starting_date}
                  - date::sys_days{config->starting_date()})
                     .count();
-    auto* e = new TurnOffMutationEvent(time);
-    events.push_back(e);
+    auto* event = new TurnOffMutationEvent(time);
+    events.push_back(event);
   }
 
   return events;
@@ -545,9 +571,8 @@ std::vector<Event*> PopulationEventBuilder::build_update_beta_raster_event(
         throw std::invalid_argument("File for "
                                     + UpdateBetaRasterEvent::EventName
                                     + " does not appear to exist.");
-      } else {
-        file.close();
       }
+      file.close();
 
       // Log and add the event to the queue
       auto* event = new UpdateBetaRasterEvent(filename, time);
@@ -616,6 +641,10 @@ std::vector<Event*> PopulationEventBuilder::build(const YAML::Node &node,
     events = build_change_treatment_strategy_event(node["info"], config);
   }
 
+  if (name == "change_recrudescence_treatment") {
+    events = build_change_recrudescence_treatment_event(node["info"], config);
+  }
+
   if (name == "single_round_MDA") {
     events = build_single_round_mda_event(node["info"], config);
   }
@@ -669,5 +698,3 @@ void PopulationEventBuilder::verify_single_node(const YAML::Node &node,
   }
 }
 
-// Re-enable DFA in CLion
-#pragma clang diagnostic pop

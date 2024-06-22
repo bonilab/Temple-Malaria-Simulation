@@ -24,8 +24,8 @@ protected:
   struct MonthlySiteData {
     std::vector<double> eir, pfpr_under5, pfpr2to10, pfpr_all;
     std::vector<int> population, clinical_episodes, treatments,
-        treatment_failures, nontreatment, treatments_under5, treatments_over5,
-        infections_by_district;
+        recrudescence_treatments, treatment_failures, nontreatment,
+        treatments_under5, treatments_over5, infections_by_district;
     std::vector<std::vector<int>> clinical_episodes_by_age_class;
   };
 

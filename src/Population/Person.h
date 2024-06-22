@@ -224,7 +224,7 @@ public:
   void schedule_end_clinical_event(
       ClonalParasitePopulation* clinical_caused_parasite);
 
-  void schedule_clinical_recrudesence_event(
+  void schedule_clinical_recrudescence_event(
       ClonalParasitePopulation* clinical_caused_parasite);
 
   void schedule_move_parasite_to_blood(Genotype* genotype, const int &time);

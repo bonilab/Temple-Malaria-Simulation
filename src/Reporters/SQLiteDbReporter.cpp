@@ -72,6 +72,7 @@ void SQLiteDbReporter::populate_db_schema() {
       + ageClassColumns +
       R""""(
         treatments INTEGER NOT NULL,
+        recrudescence_treatments INTEGER NOT NULL,
         treatmentfailures INTEGER NOT NULL,
         eir REAL NOT NULL,
         pfprunder5 REAL NOT NULL,
@@ -161,7 +162,7 @@ void SQLiteDbReporter::initialize(int jobNumber, const std::string &path) {
   insert_site_query_prefix_ = " INSERT INTO MonthlySiteData (MonthlyDataId, LocationId, "
     "Population, ClinicalEpisodes, " 
     + ageClassColumns + 
-    " Treatments, EIR, PfPrUnder5, PfPr2to10, PfPrAll, infectedindividuals , TreatmentFailures,"
+    " Treatments, recrudescence_treatments, EIR, PfPrUnder5, PfPr2to10, PfPrAll, infectedindividuals , TreatmentFailures,"
     " NonTreatment, Under5Treatment, Over5Treatment) VALUES";
 }
 

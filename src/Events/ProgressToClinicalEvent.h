@@ -19,6 +19,8 @@ class Scheduler;
 
 class ClonalParasitePopulation;
 
+class Therapy;
+
 class ProgressToClinicalEvent : public Event {
   OBJECTPOOL(ProgressToClinicalEvent)
 
@@ -26,20 +28,26 @@ class ProgressToClinicalEvent : public Event {
 
   POINTER_PROPERTY(ClonalParasitePopulation, clinical_caused_parasite)
 
+  PROPERTY_REF(bool, is_clinical_recrudenscence)
+
 public:
   ProgressToClinicalEvent();
 
   ~ProgressToClinicalEvent() override;
 
-  static void schedule_event(Scheduler* scheduler, Person* p,
+  static void schedule_event(Scheduler* scheduler, Person* person,
                              ClonalParasitePopulation* clinical_caused_parasite,
-                             const int &time);
+                             bool is_clinical_recrudenscence, const int &time);
 
-  static void receive_no_treatment_routine(Person* p);
+  static void receive_no_treatment_routine(Person* person);
 
   std::string name() override { return "ProgressToClinicalEvent"; }
 
 private:
+  void transition_to_clinical_state(Person* person);
+  static Therapy* determine_recrudesence_therapy(Person* person);
+  void apply_therapy(Person* person, Therapy* therapy);
+
   void execute() override;
 };
 

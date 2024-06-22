@@ -109,16 +109,18 @@ void SQLitePixelReporter::monthly_report_site_data(int monthId) {
       singleRow += fmt::format(", {}", episodes);
     }
 
-    singleRow +=
-        fmt::format(", {}, {}, {}, {}, {}, {}, {}, {}, {}, {})",
-                    Model::MAIN_DATA_COLLECTOR
-                        ->monthly_number_of_treatment_by_location()[location],
-                    eir, pfprUnder5, pfpr2to10, pfprAll, infectedIndividuals,
-                    Model::MAIN_DATA_COLLECTOR
-                        ->monthly_treatment_failure_by_location()[location],
-                    Model::MAIN_DATA_COLLECTOR
-                        ->monthly_nontreatment_by_location()[location],
-                    treatmentsUnder5, treatmentsOver5);
+    singleRow += fmt::format(
+        ", {}, {}, {}, {}, {}, {}, {}, {}, {}, {},{})",
+        Model::MAIN_DATA_COLLECTOR
+            ->monthly_number_of_treatment_by_location()[location],
+        Model::MAIN_DATA_COLLECTOR
+            ->monthly_number_of_recrudescence_treatment_by_location()[location],
+        eir, pfprUnder5, pfpr2to10, pfprAll, infectedIndividuals,
+        Model::MAIN_DATA_COLLECTOR
+            ->monthly_treatment_failure_by_location()[location],
+        Model::MAIN_DATA_COLLECTOR
+            ->monthly_nontreatment_by_location()[location],
+        treatmentsUnder5, treatmentsOver5);
 
     values.push_back(singleRow);
   }

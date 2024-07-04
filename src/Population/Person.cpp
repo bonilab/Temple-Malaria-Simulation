@@ -296,7 +296,7 @@ bool Person::will_progress_to_death_when_receive_treatment() {
   // 90% lower than no treatment
   return P <= Model::CONFIG
                       ->mortality_when_treatment_fail_by_age_class()[age_class_]
-                  * (1 - 0.9);
+                  * 0.1;
 }
 
 void Person::schedule_progress_to_clinical_event_by(
@@ -305,7 +305,7 @@ void Person::schedule_progress_to_clinical_event_by(
                                 : Model::CONFIG->days_to_clinical_over_five();
 
   ProgressToClinicalEvent::schedule_event(
-      Model::SCHEDULER, this, blood_parasite, false,
+      Model::SCHEDULER, this, blood_parasite,
       Model::SCHEDULER->current_time() + time);
 }
 
@@ -343,7 +343,7 @@ int Person::complied_dosing_days(const SCTherapy* therapy) {
 // event of one.
 void Person::receive_therapy(Therapy* therapy,
                              ClonalParasitePopulation* clinical_caused_parasite,
-                             bool is_mac_therapy) {
+                             bool is_mac_therapy, bool is_public_sector) {
   // Start by checking if this is a simple therapy with a single dosing regime
   auto* sc_therapy = dynamic_cast<SCTherapy*>(therapy);
   if (sc_therapy != nullptr) {
@@ -389,6 +389,11 @@ void Person::receive_therapy(Therapy* therapy,
   }
 
   last_therapy_id_ = therapy->id();
+
+  if (is_public_sector) {
+    lastest_time_received_public_sector_treatment_ =
+        Model::SCHEDULER->current_time();
+  }
 }
 
 void Person::receive_therapy(SCTherapy* sc_therapy, bool is_mac_therapy) {
@@ -608,7 +613,7 @@ void Person::schedule_clinical_recrudescence_event(
   days_to_clinical = std::min<int>(std::max<int>(days_to_clinical, 7), 54);
 
   ProgressToClinicalEvent::schedule_event(
-      Model::SCHEDULER, this, clinical_caused_parasite, true,
+      Model::SCHEDULER, this, clinical_caused_parasite,
       Model::SCHEDULER->current_time() + days_to_clinical);
 }
 

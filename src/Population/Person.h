@@ -120,6 +120,8 @@ public:
 
   PROPERTY_REF(int, last_therapy_id)
 
+  PROPERTY_REF(int, lastest_time_received_public_sector_treatment)
+
   PROPERTY_REF(std::vector<double>, prob_present_at_mda_by_age)
 
 #ifdef ENABLE_TRAVEL_TRACKING
@@ -128,6 +130,7 @@ public:
 #endif
 
 private:
+  // TODO: remove the unnecessary _uid
   // The UID is generated each time the person is initialized
   ul_uid _uid = -1;
 
@@ -206,7 +209,8 @@ public:
 
   void receive_therapy(Therapy* therapy,
                        ClonalParasitePopulation* clinical_caused_parasite,
-                       bool is_mac_therapy = false);
+                       bool is_mac_therapy = false,
+                       bool is_public_sector = true);
 
   void add_drug_to_blood(DrugType* dt, const int &dosing_days,
                          bool is_mac_therapy);

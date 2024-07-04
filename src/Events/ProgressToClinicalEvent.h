@@ -28,8 +28,6 @@ class ProgressToClinicalEvent : public Event {
 
   POINTER_PROPERTY(ClonalParasitePopulation, clinical_caused_parasite)
 
-  PROPERTY_REF(bool, is_clinical_recrudenscence)
-
 public:
   ProgressToClinicalEvent();
 
@@ -37,7 +35,7 @@ public:
 
   static void schedule_event(Scheduler* scheduler, Person* person,
                              ClonalParasitePopulation* clinical_caused_parasite,
-                             bool is_clinical_recrudenscence, const int &time);
+                             const int &time);
 
   static void receive_no_treatment_routine(Person* person);
 
@@ -45,8 +43,10 @@ public:
 
 private:
   void transition_to_clinical_state(Person* person);
-  static Therapy* determine_recrudesence_therapy(Person* person);
-  void apply_therapy(Person* person, Therapy* therapy);
+  static std::tuple<Therapy*, bool> determine_therapy(
+      Person* person, bool is_recurrence = false);
+  void apply_therapy(Person* person, Therapy* therapy,
+                     bool is_public_sector = true);
 
   void execute() override;
 };

@@ -11,7 +11,7 @@ ChangeRecrudescenceTreatmentEvent::ChangeRecrudescenceTreatmentEvent(
 }
 
 void ChangeRecrudescenceTreatmentEvent::execute() {
-  Model::CONFIG->recrudescence_therapy_id() = therapy_id;
+  Model::CONFIG->recurrence_therapy_id() = therapy_id;
   LOG(INFO) << date::year_month_day{scheduler->calendar_date} << " : switch to "
             << this->name();
 }

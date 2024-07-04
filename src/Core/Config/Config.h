@@ -97,7 +97,7 @@ public:
 
   CONFIG_ITEM(genotype_info, GenotypeInfo, GenotypeInfo())
 
-  CONFIG_ITEM(recrudescence_therapy_id, int, -1)
+  CONFIG_ITEM(recurrence_therapy_id, int, -1)
 
   CONFIG_ITEM(initial_strategy_id, int, -1)
 

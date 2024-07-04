@@ -21,7 +21,7 @@
 OBJECTPOOL_IMPL(ProgressToClinicalEvent)
 
 ProgressToClinicalEvent::ProgressToClinicalEvent()
-    : clinical_caused_parasite_(nullptr), is_clinical_recrudenscence_(false) {}
+    : clinical_caused_parasite_(nullptr) {}
 
 ProgressToClinicalEvent::~ProgressToClinicalEvent() = default;
 
@@ -46,12 +46,11 @@ void handle_no_treatment(Person* person) {
   }
 }
 
-Therapy* ProgressToClinicalEvent::determine_recrudesence_therapy(
-    Person* person) {
+std::tuple<Therapy*, bool> ProgressToClinicalEvent::determine_therapy(
+    Person* person, bool is_recurrence) {
   auto* strategy = dynamic_cast<NestedMFTStrategy*>(Model::TREATMENT_STRATEGY);
   if (strategy != nullptr) {
     // if the strategy is NestedMFT and the therapy is the public sector
-
     const auto probability = Model::RANDOM->random_flat(0.0, 1.0);
 
     double sum = 0;
@@ -63,22 +62,29 @@ Therapy* ProgressToClinicalEvent::determine_recrudesence_therapy(
         break;
       }
     }
-    if (s_id == 0 && Model::CONFIG->recrudescence_therapy_id() != -1) {
-      return Model::CONFIG
-          ->therapy_db()[Model::CONFIG->recrudescence_therapy_id()];
+    // this is public sector
+    if (s_id == 0) {
+      if (is_recurrence && Model::CONFIG->recurrence_therapy_id() != -1) {
+        return {
+            Model::CONFIG->therapy_db()[Model::CONFIG->recurrence_therapy_id()],
+            false};
+      }
+      return {strategy->strategy_list[s_id]->get_therapy(person), true};
     }
-    return strategy->strategy_list[s_id]->get_therapy(person);
+    return {strategy->strategy_list[s_id]->get_therapy(person), false};
   }
 
   // main strategy is not NestedMFT or public private sector strategies
-  if (Model::CONFIG->recrudescence_therapy_id() != -1) {
-    return Model::CONFIG
-        ->therapy_db()[Model::CONFIG->recrudescence_therapy_id()];
+  if (Model::CONFIG->recurrence_therapy_id() != -1) {
+    return {Model::CONFIG->therapy_db()[Model::CONFIG->recurrence_therapy_id()],
+            false};
   }
-  return Model::TREATMENT_STRATEGY->get_therapy(person);
+  return {Model::TREATMENT_STRATEGY->get_therapy(person), true};
 }
-void ProgressToClinicalEvent::apply_therapy(Person* person, Therapy* therapy) {
-  person->receive_therapy(therapy, clinical_caused_parasite_);
+void ProgressToClinicalEvent::apply_therapy(Person* person, Therapy* therapy,
+                                            bool is_public_sector) {
+  person->receive_therapy(therapy, clinical_caused_parasite_, false,
+                          is_public_sector);
 
   clinical_caused_parasite_->set_update_function(
       Model::MODEL->having_drug_update_function());
@@ -127,26 +133,34 @@ void ProgressToClinicalEvent::transition_to_clinical_state(Person* person) {
                                                          person->age_class());
 
   if (should_receive_treatment(person)) {
-    Therapy* therapy = nullptr;
-    if (is_clinical_recrudenscence()) {
-      therapy = determine_recrudesence_therapy(person);
+    // if the lastest public treatment is within 30 days
+    // and the person decided to go to public sector
+    // then the person will receive the recrudenscence therapy
+
+    if (Model::SCHEDULER->current_time()
+            - person->lastest_time_received_public_sector_treatment()
+        < 30) {
+      const auto [therapy, is_public_sector] = determine_therapy(person, true);
 
       // record  1 treatment for recrudensence
       Model::MAIN_DATA_COLLECTOR->record_1_recrudescence_treatment(
           person->location(), person->age_class(), therapy->id());
 
+      apply_therapy(person, therapy, is_public_sector);
     } else {
       // this is normal routine for clinical cases
-      therapy = Model::TREATMENT_STRATEGY->get_therapy(person);
+      const auto [therapy, is_public_sector] = determine_therapy(person, false);
       // only record for non-recrudenscence treatment
       // Statistic increase today treatments
       Model::MAIN_DATA_COLLECTOR->record_1_treatment(
           person->location(), person->age_class(), therapy->id());
+
+      // TODO: should we only record for the public sector treatment?
       person->schedule_test_treatment_failure_event(
           clinical_caused_parasite_, Model::CONFIG->tf_testing_day(),
           therapy->id());
+      apply_therapy(person, therapy, is_public_sector);
     }
-    apply_therapy(person, therapy);
   } else {
     handle_no_treatment(person);
   }
@@ -179,8 +193,7 @@ void ProgressToClinicalEvent::execute() {
 
 void ProgressToClinicalEvent::schedule_event(
     Scheduler* scheduler, Person* person,
-    ClonalParasitePopulation* clinical_caused_parasite,
-    bool is_clinical_recrudenscence, const int &time) {
+    ClonalParasitePopulation* clinical_caused_parasite, const int &time) {
   // Ensure that the scheduler exists
   assert(scheduler != nullptr);
 
@@ -188,7 +201,6 @@ void ProgressToClinicalEvent::schedule_event(
   auto* event = new ProgressToClinicalEvent();
   event->dispatcher = person;
   event->set_clinical_caused_parasite(clinical_caused_parasite);
-  event->set_is_clinical_recrudenscence(is_clinical_recrudenscence);
   event->time = time;
   person->add(event);
   scheduler->schedule_individual_event(event);

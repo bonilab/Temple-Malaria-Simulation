@@ -105,11 +105,13 @@ void ProgressToClinicalEvent::apply_therapy(Person* person, Therapy* therapy,
 }
 
 void ProgressToClinicalEvent::transition_to_clinical_state(Person* person) {
+  // std::cout << "Transition to clinical state" << std::endl;
   const auto density = Model::RANDOM->random_uniform_double(
       Model::CONFIG->parasite_density_level()
           .log_parasite_density_clinical_from,
       Model::CONFIG->parasite_density_level().log_parasite_density_clinical_to);
-
+  // std::cout << "day: " << Model::SCHEDULER->current_time()
+  //           << " - density: " << density << std::endl;
   clinical_caused_parasite_->set_last_update_log10_parasite_density(density);
 
   // Person change state to Clinical
@@ -133,6 +135,7 @@ void ProgressToClinicalEvent::transition_to_clinical_state(Person* person) {
                                                          person->age_class());
 
   if (should_receive_treatment(person)) {
+    // std::cout << "Receive treatment" << std::endl;
     // if the lastest public treatment is within 30 days
     // and the person decided to go to public sector
     // then the person will receive the recrudenscence therapy

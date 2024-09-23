@@ -74,6 +74,8 @@ public:
     NUMBER_OF_STATE = 5
   };
 
+  enum RecrudescenceState { NONE = 0, WITHOUT_SYMPTOM = 1, WITH_SYMPTOM = 2 };
+
   OBJECTPOOL(Person)
 
   DELETE_COPY_AND_MOVE(Person)
@@ -144,6 +146,7 @@ private:
   static int complied_dosing_days(const SCTherapy* therapy);
 
 public:
+  RecrudescenceState recrudescence_status{NONE};
   Person();
   ~Person() override;
 

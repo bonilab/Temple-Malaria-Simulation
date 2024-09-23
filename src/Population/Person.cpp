@@ -61,6 +61,7 @@ Person::Person()
       all_clonal_parasite_populations_(nullptr),
       drugs_in_blood_(nullptr),
       today_infections_(nullptr),
+      lastest_time_received_public_sector_treatment_(-30),
 #ifdef ENABLE_TRAVEL_TRACKING
       day_that_last_trip_was_initiated_(-1),
       day_that_last_trip_outside_district_was_initiated_(-1),
@@ -312,6 +313,7 @@ void Person::schedule_progress_to_clinical_event_by(
 void Person::schedule_test_treatment_failure_event(
     ClonalParasitePopulation* blood_parasite, const int &testing_day,
     const int &t_id) {
+  // std::cout << "Person::schedule_test_treatment_failure_event" << std::endl;
   TestTreatmentFailureEvent::schedule_event(
       Model::SCHEDULER, this, blood_parasite,
       Model::SCHEDULER->current_time() + testing_day, t_id);
@@ -551,14 +553,34 @@ void Person::determine_symptomatic_recrudescence(
         Model::MODEL->progress_to_clinical_update_function());
 
     // Set the last update parasite density to the asymptomatic level
+
     clinical_caused_parasite->set_last_update_log10_parasite_density(
-        Model::CONFIG->parasite_density_level()
-            .log_parasite_density_asymptomatic);
+        Model::RANDOM->random_normal_truncated(
+            Model::CONFIG->parasite_density_level()
+                .log_parasite_density_asymptomatic,
+            0.1));
+    // clinical_caused_parasite->set_last_update_log10_parasite_density(
+    //     Model::CONFIG->parasite_density_level()
+    //         .log_parasite_density_asymptomatic);
     // Schedule a relapse event
     schedule_clinical_recrudescence_event(clinical_caused_parasite);
 
+    this->recrudescence_status = Person::RecrudescenceState::WITH_SYMPTOM;
+    // mark the test treatment failure event as a failure
+    for (auto* event : *events()) {
+      auto* tf_event = dynamic_cast<TestTreatmentFailureEvent*>(event);
+      if (tf_event != nullptr
+          && tf_event->clinical_caused_parasite() == clinical_caused_parasite) {
+        event->executable = false;
+        Model::MAIN_DATA_COLLECTOR->record_1_treatment_failure_by_therapy(
+            location_, age_class_, tf_event->therapyId());
+      }
+    }
+
   } else {
     // continue the assymptomatic state with either having drug or immunity
+
+    this->recrudescence_status = Person::RecrudescenceState::WITHOUT_SYMPTOM;
 
     // If the last update parasite density is greater than the asymptomatic
     // level, adjust it. We don't want to have high parasitaemia yn
@@ -567,8 +589,10 @@ void Person::determine_symptomatic_recrudescence(
         > Model::CONFIG->parasite_density_level()
               .log_parasite_density_asymptomatic) {
       clinical_caused_parasite->set_last_update_log10_parasite_density(
-          Model::CONFIG->parasite_density_level()
-              .log_parasite_density_asymptomatic);
+          Model::RANDOM->random_normal_truncated(
+              Model::CONFIG->parasite_density_level()
+                  .log_parasite_density_asymptomatic,
+              0.1));
     }
 
     if (drugs_in_blood_->size() > 0) {
@@ -593,8 +617,13 @@ void Person::determine_clinical_or_not(
       clinical_caused_parasite->set_update_function(
           Model::MODEL->progress_to_clinical_update_function());
       clinical_caused_parasite->set_last_update_log10_parasite_density(
-          Model::CONFIG->parasite_density_level()
-              .log_parasite_density_asymptomatic);
+          Model::RANDOM->random_normal_truncated(
+              Model::CONFIG->parasite_density_level()
+                  .log_parasite_density_asymptomatic,
+              0.1));
+      // clinical_caused_parasite->set_last_update_log10_parasite_density(
+      //     Model::CONFIG->parasite_density_level()
+      //         .log_parasite_density_asymptomatic);
       schedule_progress_to_clinical_event_by(clinical_caused_parasite);
     } else {
       // progress to clearance

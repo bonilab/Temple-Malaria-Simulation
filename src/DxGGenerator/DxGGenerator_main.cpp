@@ -157,12 +157,17 @@ double getEfficacyForTherapy(Genotype* g, int therapy_id, Model* p_model) {
   strategy->add_therapy(mainTherapy);
 
   // Reset the reporter and add the PK/PD reporter
-  for (auto reporter : p_model->reporters()) { delete reporter; }
+  for (auto* reporter : p_model->reporters()) { delete reporter; }
   p_model->reporters().clear();
-  p_model->add_reporter(new PkPdReporter());
+
+  auto* pkpd_reporter = new PkPdReporter();
+
+  p_model->add_reporter(pkpd_reporter);
+  std::string prefix = fmt::format("{}_{}", therapy_id, g->genotype_id());
+  pkpd_reporter->initialize(0, prefix);
 
   auto* genotype = Model::CONFIG->genotype_db()->at(g->genotype_id());
-  for (auto person : Model::POPULATION->all_persons()->vPerson()) {
+  for (auto* person : Model::POPULATION->all_persons()->vPerson()) {
     auto density =
         Model::CONFIG->parasite_density_level().log_parasite_density_from_liver;
     auto* blood_parasite = person->add_new_parasite_to_blood(genotype);
@@ -179,21 +184,40 @@ double getEfficacyForTherapy(Genotype* g, int therapy_id, Model* p_model) {
   }
 
   p_model->run();
-  const auto result =
-      1 - Model::MAIN_DATA_COLLECTOR->blood_slide_prevalence_by_location()[0];
+  // const auto result =
+  //     1 -
+  //     Model::MAIN_DATA_COLLECTOR->blood_slide_prevalence_by_location()[0];
+  //
+  // std::cout
+  //     <<
+  //     p_model->data_collector()->monthly_treatment_failure_by_location()[0]
+  //     << std::endl;
 
+  const auto result = 1
+                      - (1.0
+                         * Model::MAIN_DATA_COLLECTOR
+                               ->monthly_treatment_failure_by_location()[0]
+                         / Model::POPULATION->size());
+
+  // reset simulation
   delete Model::POPULATION;
   delete Model::SCHEDULER;
+  delete Model::MAIN_DATA_COLLECTOR;
+
   p_model->set_population(new Population(p_model));
   Model::POPULATION = p_model->population();
   p_model->set_scheduler(new Scheduler(p_model));
   Model::SCHEDULER = p_model->scheduler();
+  p_model->set_data_collector(new MainDataCollector(p_model));
+  Model::MAIN_DATA_COLLECTOR = p_model->data_collector();
 
   p_model->scheduler()->initialize(Model::CONFIG->starting_date(),
                                    Model::CONFIG->total_time());
   p_model->scheduler()->set_days_between_notifications(
       Model::CONFIG->days_between_notifications());
   p_model->population()->initialize();
+
+  p_model->data_collector()->initialize();
 
   return result;
 }

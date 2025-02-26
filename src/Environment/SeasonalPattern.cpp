@@ -10,32 +10,12 @@ SeasonalPattern* SeasonalPattern::build(const YAML::Node &node) {
   // Prepare the object to be returned
   auto value = new SeasonalPattern();
 
-  // Note the node for settings
-  auto settings = node["pattern"];
-
-  // Validate settings
-  if (settings["filename"].IsNull()) {
-    throw std::invalid_argument("The seasonal pattern filename parameter is missing.");
-  }
-  if (settings["period"].IsNull()) {
-    throw std::invalid_argument("The seasonal pattern period parameter is missing.");
-  }
-
-  // Set period (12 or 365)
-  value->period = settings["period"].as<int>();
-  if (value->period != 12 && value->period != 365) {
-    throw std::invalid_argument("Period must be either 12 (monthly) or 365 (daily)");
-  }
-  value->is_monthly = (value->period == 12);
-
-  // Read the district-specific adjustments
-  auto filename = settings["filename"].as<std::string>();
-  value->read(filename);
+  value->initialize(node);
 
   return value;
 }
 
-void SeasonalPattern::read(std::string &filename) {
+void SeasonalPattern::read(const std::string &filename) {
   std::ifstream in(filename);
   if (!in.good()) {
     throw std::runtime_error("Error opening the rainfall data file: " + filename);

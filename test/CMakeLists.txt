@@ -9,6 +9,7 @@ set(TEST_SRC_FILES
     sample_catch_test.cpp
     sample_yaml_cpp_test.cpp
     person_test.cpp
+    Environment/SeasonalPatternTest.cpp
     #SimpleFakeItTest.cpp
     #Spatial/CoordinateTest.cpp
     #Spatial/LocationTest.cpp

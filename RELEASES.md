@@ -16,6 +16,12 @@ Version 4.1.9 enhances the seasonal modeling capabilities by adding district-spe
    - Input via CSV file with format: `district_id,factor1,factor2,...,factor12|365`
    - Proper handling of leap years in seasonal calculations
    - Integration with district mapping from SpatialData
+   - Robust error handling for:
+     * Missing or invalid district data
+     * Malformed CSV files
+     * Negative seasonal factors
+     * Non-existent input files
+     * Incorrect number of values (must be exactly 12 for monthly or 365 for daily)
 
 2. Configuration example for district-specific seasonal patterns:
 ```yaml
@@ -36,6 +42,11 @@ district_id,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec
 2,0.6,0.65,0.7,0.75,0.8,0.9,1.0,0.95,0.8,0.75,0.7,0.65
 ```
 
+For monthly data:
+- Values are automatically expanded to daily values
+- Each month's value is repeated for all days in that month
+- Accounts for varying month lengths (28/29 for February, 30/31 for others)
+
 For daily data (365 values per district):
 ```csv
 district_id,day1,day2,day3,day4,day5,...,day364,day365
@@ -43,7 +54,11 @@ district_id,day1,day2,day3,day4,day5,...,day364,day365
 2,0.6,0.61,0.62,0.63,0.64,...,0.62,0.61
 ```
 
-Note: For leap years (day 366), the simulation will use the same value as day 365.
+Notes:
+- For leap years (day 366), the simulation will use the same value as day 365
+- All seasonal factors must be non-negative
+- District IDs must match those in the spatial configuration
+- Missing or malformed data will cause the simulation to fail with an appropriate error message
 
 ### Version 4.1.8
 

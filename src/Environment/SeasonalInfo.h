@@ -62,23 +62,50 @@ public:
 };
 
 class SeasonalPattern : public ISeasonalInfo {
-private:
+protected:
   // Vector of vectors: [district][day/month]
   std::vector<DoubleVector> district_adjustments;
   int period;  // Either 365 for daily or 12 for monthly
   bool is_monthly;  // Flag to indicate if we're using monthly data
 
-  void read(std::string &filename);
+  // Make this virtual so we can override it in tests
+  virtual int get_district_for_location(int location) const {
+    return SpatialData::get_instance().get_district(location);
+  }
+
+  void read(const std::string &filename);
+
+  // Protected method for initialization logic
+  void initialize(const YAML::Node &node) {
+    auto settings = node["pattern"];
+    // Validate settings
+    if (settings["filename"].IsNull()) {
+      throw std::invalid_argument("The seasonal pattern filename parameter is missing.");
+    }
+    if (settings["period"].IsNull()) {
+      throw std::invalid_argument("The seasonal pattern period parameter is missing.");
+    }
+
+    // Set period (12 or 365)
+    period = settings["period"].as<int>();
+    if (period != 12 && period != 365) {
+      throw std::invalid_argument("Period must be either 12 (monthly) or 365 (daily)");
+    }
+    is_monthly = (period == 12);
+
+    // Read the district-specific adjustments
+    auto filename = settings["filename"].as<std::string>();
+    read(filename);
+  }
 
 public:
   static SeasonalPattern* build(const YAML::Node &node);
   double get_seasonal_factor(const date::sys_days &today,
                            const int &location) override;
 
-  // Helper to get district from location using SpatialData
-  int get_district_for_location(int location) const {
-    return SpatialData::get_instance().get_district(location);
-  }
+  // Getter methods for testing
+  bool get_is_monthly() const { return is_monthly; }
+  int get_period() const { return period; }
 };
 
 class SeasonalInfoFactory {

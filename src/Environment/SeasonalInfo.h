@@ -14,6 +14,7 @@
 #include <algorithm>
 
 #include "Core/TypeDef.h"
+#include "GIS/SpatialData.h"
 
 class Config;
 
@@ -60,17 +61,24 @@ public:
   void update_seasonality(int from, int to);
 };
 
-class SeasonalRainfall : public ISeasonalInfo {
+class SeasonalPattern : public ISeasonalInfo {
 private:
-  DoubleVector adjustments;
-  int period;
+  // Vector of vectors: [district][day/month]
+  std::vector<DoubleVector> district_adjustments;
+  int period;  // Either 365 for daily or 12 for monthly
+  bool is_monthly;  // Flag to indicate if we're using monthly data
 
   void read(std::string &filename);
 
 public:
-  static SeasonalRainfall* build(const YAML::Node &node);
+  static SeasonalPattern* build(const YAML::Node &node);
   double get_seasonal_factor(const date::sys_days &today,
-                             const int &location) override;
+                           const int &location) override;
+
+  // Helper to get district from location using SpatialData
+  int get_district_for_location(int location) const {
+    return SpatialData::get_instance().get_district(location);
+  }
 };
 
 class SeasonalInfoFactory {
@@ -100,9 +108,9 @@ public:
       LOG(INFO) << "Using equation-based seasonal information.";
       return SeasonalEquation::build(node, config);
     }
-    if (mode == "RAINFALL") {
-      LOG(INFO) << "Using rainfall-based seasonal information.";
-      return SeasonalRainfall::build(node);
+    if (mode == "PATTERN") {
+      LOG(INFO) << "Using pattern-based seasonal information.";
+      return SeasonalPattern::build(node);
     }
     throw std::runtime_error(fmt::format("Unknown seasonal mode {}", mode));
   }

@@ -6,6 +6,45 @@ dictate the features currently under development.
 
 ## Change Log
 
+### Version 4.1.9
+
+Version 4.1.9 enhances the seasonal modeling capabilities by adding district-specific seasonal patterns:
+
+1. Enhanced SeasonalPattern implementation to support district-specific patterns:
+   - Added support for both monthly (12 values) and daily (365 values) seasonal factors per district
+   - Automatic conversion from monthly to daily data during initialization
+   - Input via CSV file with format: `district_id,factor1,factor2,...,factor12|365`
+   - Proper handling of leap years in seasonal calculations
+   - Integration with district mapping from SpatialData
+
+2. Configuration example for district-specific seasonal patterns:
+```yaml
+seasonal_info:
+  enable: true
+  mode: "PATTERN"
+  pattern:
+    filename: "district_seasonal_factors.csv"
+    period: 12  # or 365 for daily data
+```
+
+The CSV input file format can be either monthly or daily:
+
+For monthly data (12 values per district):
+```csv
+district_id,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec
+1,0.5,0.55,0.6,0.65,0.7,0.8,0.9,0.85,0.7,0.65,0.6,0.55
+2,0.6,0.65,0.7,0.75,0.8,0.9,1.0,0.95,0.8,0.75,0.7,0.65
+```
+
+For daily data (365 values per district):
+```csv
+district_id,day1,day2,day3,day4,day5,...,day364,day365
+1,0.5,0.51,0.52,0.53,0.54,...,0.52,0.51
+2,0.6,0.61,0.62,0.63,0.64,...,0.62,0.61
+```
+
+Note: For leap years (day 366), the simulation will use the same value as day 365.
+
 ### Version 4.1.8
 
 Version 4.1.8 is currently in progress and will update the simuation to run in the compute environment at Temple University,

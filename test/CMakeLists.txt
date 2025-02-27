@@ -4,12 +4,21 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 
 find_package(Catch2 CONFIG REQUIRED)
 
+# Group GIS test files
+set(GIS_TEST_FILES
+    GIS/SpatialDataTest/BasicOperationsTest.cpp
+    GIS/SpatialDataTest/DistrictOperationsTest.cpp
+    GIS/SpatialDataTest/RasterOperationsTest.cpp
+    GIS/SpatialDataTest/ErrorHandlingTest.cpp
+)
+
 set(TEST_SRC_FILES
     main.cpp
     sample_catch_test.cpp
     sample_yaml_cpp_test.cpp
     person_test.cpp
     Environment/SeasonalPatternTest.cpp
+    ${GIS_TEST_FILES}
     #SimpleFakeItTest.cpp
     #Spatial/CoordinateTest.cpp
     #Spatial/LocationTest.cpp

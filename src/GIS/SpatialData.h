@@ -11,6 +11,8 @@
 
 #include <string>
 #include <vector>
+#include <array>
+#include <memory>
 
 #include "AscFile.h"
 #include "Core/PropertyMacro.h"
@@ -81,7 +83,7 @@ public:
    */
   PROPERTY_REF(std::vector<int>, district_lookup)
 
-private:
+// private:
   const std::string BETA_RASTER = "beta_raster";
   const std::string DISTRICT_RASTER = "district_raster";
   const std::string LOCATION_RASTER = "location_raster";
@@ -91,8 +93,8 @@ private:
   const std::string TREATMENT_RATE_UNDER5 = "pr_treatment_under5";
   const std::string TREATMENT_RATE_OVER5 = "pr_treatment_over5";
 
-  // Array of the ASC file data, use SpatialFileType as the index
-  AscFile** data;
+  // Initialize array with nullptr
+  std::array<std::unique_ptr<AscFile>, SpatialFileType::Count> data{};
 
   // Flag to indicate if data has been loaded since the last time it was checked
   bool dirty = false;
@@ -223,7 +225,7 @@ public:
   int get_first_district();
 
   // Get a reference to the AscFile raster, may be a nullptr
-  AscFile* get_raster(SpatialFileType type) { return data[type]; }
+  AscFile* get_raster(SpatialFileType type) { return data[type].get(); }
 
   // Parse the YAML node provided to extract all the relevant information for
   // the simulation
@@ -267,6 +269,16 @@ public:
   // Write the current spatial data to the filename and path indicated, output
   // will be an ASC file
   void write(const std::string &filename, SpatialFileType type);
+
+  // Reset the singleton instance for testing
+  void reset() {
+    // Reset each unique_ptr individually
+    for (auto& ptr : data) {
+      ptr.reset();
+    }
+    first_district = 0;
+    district_count = 0;
+  }
 };
 
 #endif

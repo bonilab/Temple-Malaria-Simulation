@@ -6,6 +6,34 @@ dictate the features currently under development.
 
 ## Change Log
 
+### Version 4.1.10
+
+Version 4.1.10 improves memory management and code quality:
+
+1. Enhanced SpatialData implementation with modern C++ practices:
+   - Replaced raw pointer array with std::array of std::unique_ptr
+   - Improved memory management with RAII principles
+   - Better error handling and null pointer checks
+   - More consistent pointer access patterns
+   - Cleaner initialization and cleanup
+
+2. Code quality improvements:
+   - Removed manual memory management
+   - Eliminated potential memory leaks
+   - Improved type safety
+   - Better const correctness
+   - More consistent error handling
+
+3. Performance considerations:
+   - Optimized pointer access patterns
+   - Reduced overhead from manual memory management
+   - Cache-friendly data structures
+   - Zero-cost abstractions for pointer management
+
+4. Add UnitTest for SpatialData
+
+These changes improve the robustness and maintainability of the spatial data handling system while maintaining the existing functionality and performance characteristics.
+
 ### Version 4.1.9
 
 Version 4.1.9 enhances the seasonal modeling capabilities by adding district-specific seasonal patterns:

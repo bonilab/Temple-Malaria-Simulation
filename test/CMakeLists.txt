@@ -10,6 +10,10 @@ set(GIS_TEST_FILES
     GIS/SpatialDataTest/DistrictOperationsTest.cpp
     GIS/SpatialDataTest/RasterOperationsTest.cpp
     GIS/SpatialDataTest/ErrorHandlingTest.cpp
+    GIS/AdminLevelManagerTest/BasicOperationsTest.cpp
+    GIS/AdminLevelManagerTest/BoundaryValidationTest.cpp
+    GIS/AdminLevelManagerTest/ConfigurationTest.cpp
+    GIS/AdminLevelManagerTest/LookupOperationsTest.cpp
 )
 
 set(TEST_SRC_FILES

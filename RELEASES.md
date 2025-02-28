@@ -6,6 +6,10 @@ dictate the features currently under development.
 
 ## Change Log
 
+### Version 4.2.0
+
+See [Version 4.2.0 Release Notes](version_4.2.0.md) for details about the multi-level administrative boundaries update.
+
 ### Version 4.1.10
 
 Version 4.1.10 improves memory management and code quality:

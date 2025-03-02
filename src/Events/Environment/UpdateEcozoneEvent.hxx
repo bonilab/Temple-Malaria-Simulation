@@ -9,6 +9,7 @@
 #include "Core/Config/Config.h"
 #include "Core/TypeDef.h"
 #include "Environment/SeasonalInfo.h"
+#include "Environment/SeasonalEquation.h"
 #include "Events/Event.h"
 #include "Model.h"
 

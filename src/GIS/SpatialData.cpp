@@ -447,55 +447,43 @@ void SpatialData::populate_dependent_data() {
     // Get a reference to the districts raster for cleaner code
     AscFile* districts_raster = data[SpatialFileType::Districts].get();
 
+    int min_district_id = std::numeric_limits<int>::max();
+    int max_district_id = std::numeric_limits<int>::min();
+
     // Perform a consistency check on the districts
-    std::list<int> districts;
+    std::set<int> unique_districts;  // Use a set to count unique districts
     for (auto ndx = 0; ndx < districts_raster->NROWS; ndx++) {
         for (auto ndy = 0; ndy < districts_raster->NCOLS; ndy++) {
             auto value = districts_raster->data[ndx][ndy];
             if (value == districts_raster->NODATA_VALUE) { continue; }
-
-            districts.emplace_back(value);
-            if (value > static_cast<float>(district_count)) {
-                district_count = static_cast<int>(value);
-            }
+            auto district_id = static_cast<int>(value);
+            unique_districts.insert(district_id);
+            min_district_id = std::min(min_district_id, district_id);
+            max_district_id = std::max(max_district_id, district_id);
         }
     }
-    LOG(INFO) << fmt::format("Districts loaded with {} districs", district_count);
+    
+    // Set district count to number of unique districts
+    district_count = unique_districts.size();
 
-    // Sort the districts and only keep the unique ones, we should have a list
-    // from [0, 1] to n with a step of one
-    districts.sort();
-    districts.unique();
+    // check size of unique districts
+    if (unique_districts.size() != max_district_id - min_district_id + 1) {
+        throw std::invalid_argument(
+            fmt::format("Expected {} districts, got {} districts with ids from {} to {}", 
+                       max_district_id - min_district_id + 1, unique_districts.size(), min_district_id, max_district_id));
+    }
+    
+    // Sort the districts to check indexing
+    std::vector<int> districts(unique_districts.begin(), unique_districts.end());
+    std::sort(districts.begin(), districts.end());
 
-    // Ensure the first value is a zero or one and verify the largest district
-    // ID is consistent with the indexing. This check prevents errors when there
-    // are gaps in the numbering of the districts or when a one-indexed file
-    // contains zeros.
+    // Determine if we're using 0-based or 1-based indexing
     if (districts.front() == 0) {
-        if ((districts.size() - 1) != district_count
-            || (districts.size() - 1) != districts.back()) {
-            LOG(ERROR) << "Highest district ID is inconsistent with a zero-based "
-                          "index, array size: "
-                       << districts.size() << ", last ID value: " << districts.back();
-            throw std::invalid_argument(
-                "District raster inconsistently numbered, or contains invalid "
-                "data.");
-        }
-        // Add a notice to the file since zero-based indexing for ASC files would
-        // be unusual
-        LOG(INFO) << "File suggests zero-based district numbering.";
         first_district = 0;
+        LOG(INFO) << "File suggests zero-based district numbering.";
     } else if (districts.front() == 1) {
-        if (districts.size() != district_count
-            || districts.size() != districts.back()) {
-            LOG(ERROR) << "Highest district ID is inconsistent with a one-based "
-                          "index, expected "
-                       << districts.size() << ", got " << districts.back();
-            throw std::invalid_argument(
-                "District raster inconsistently numbered, or contains invalid "
-                "data.");
-        }
         first_district = 1;
+        LOG(INFO) << "File suggests one-based district numbering.";
     } else {
         LOG(ERROR) << "Index of first district must be zero or one, found "
                    << districts.front();
@@ -503,7 +491,11 @@ void SpatialData::populate_dependent_data() {
             "District raster must be zero-based or one-based.");
     }
 
-    // district_loookup must be populate after populate the first_district and
+    // Log information about the districts
+    LOG(INFO) << fmt::format("Districts loaded with {} districts (IDs from {} to {})", 
+                            district_count, districts.front(), districts.back());
+
+    // district_lookup must be populated after populate the first_district and
     // district_count
     district_lookup_.clear();
     for (auto loc = 0; loc < Model::CONFIG->number_of_locations(); loc++) {

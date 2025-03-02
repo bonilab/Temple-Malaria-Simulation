@@ -108,7 +108,7 @@ public:
 
   // Count of district loaded in the map, default zero, lazy initialization to
   // actual value
-  int district_count = 0;
+  int district_count = -1;
 
   // Constructor
   SpatialData();

@@ -3,6 +3,8 @@
  *
  * Implement the equation based seasonal model.
  */
+
+#include "SeasonalEquation.h"
 #include <cmath>
 
 #include "Constants.h"
@@ -10,7 +12,6 @@
 #include "Core/Config/CustomConfigItem.h"
 #include "Helpers/TimeHelpers.h"
 #include "Model.h"
-#include "SeasonalInfo.h"
 
 SeasonalEquation* SeasonalEquation::build(const YAML::Node &node,
                                           Config* config) {

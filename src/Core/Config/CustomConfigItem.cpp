@@ -19,6 +19,7 @@
 #include <cmath>
 
 #include "Config.h"
+#include "Environment/SeasonalInfoFactory.h"
 #include "Events/Population/PopulationEventBuilder.h"
 #include "GIS/SpatialData.h"
 #include "Helpers/NumberHelpers.hxx"

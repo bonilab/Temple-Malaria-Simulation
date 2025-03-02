@@ -1,9 +1,11 @@
-#include "Environment/SeasonalInfo.h"
+#include "Environment/SeasonalPattern.h"
 #include "Helpers/TimeHelpers.h"
 #include "SeasonalPatternFixture.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <yaml-cpp/yaml.h>
+#include <fmt/format.h>
+#include <fstream>
 
 using Catch::Matchers::WithinRel;
 

@@ -4,13 +4,16 @@
  * Implement the pattern-based seasonal model.
  */
 #include "SeasonalPattern.h"
-#include "GIS/SpatialData.h"
-#include "Helpers/TimeHelpers.h"
+
 #include <fmt/format.h>
+
 #include <fstream>
+#include <iostream>
 #include <set>
 #include <sstream>
-#include <iostream>
+
+#include "GIS/SpatialData.h"
+#include "Helpers/TimeHelpers.h"
 
 SeasonalPattern* SeasonalPattern::build(const YAML::Node &node) {
   auto* result = new SeasonalPattern();
@@ -22,16 +25,19 @@ void SeasonalPattern::initialize(const YAML::Node &node) {
   auto settings = node["pattern"];
   // Validate settings
   if (settings["filename"].IsNull()) {
-    throw std::invalid_argument("The seasonal pattern filename parameter is missing.");
+    throw std::invalid_argument(
+        "The seasonal pattern filename parameter is missing.");
   }
   if (settings["period"].IsNull()) {
-    throw std::invalid_argument("The seasonal pattern period parameter is missing.");
+    throw std::invalid_argument(
+        "The seasonal pattern period parameter is missing.");
   }
 
   // Set period (12 or 365)
   period = settings["period"].as<int>();
   if (period != 12 && period != 365) {
-    throw std::invalid_argument("Period must be either 12 (monthly) or 365 (daily)");
+    throw std::invalid_argument(
+        "Period must be either 12 (monthly) or 365 (daily)");
   }
   is_monthly = (period == 12);
 
@@ -47,7 +53,8 @@ int SeasonalPattern::get_district_for_location(int location) const {
 void SeasonalPattern::read(const std::string &filename) {
   std::ifstream in(filename);
   if (!in.good()) {
-    throw std::runtime_error("Error opening the rainfall data file: " + filename);
+    throw std::runtime_error("Error opening the rainfall data file: "
+                             + filename);
   }
 
   std::string line;
@@ -60,11 +67,11 @@ void SeasonalPattern::read(const std::string &filename) {
   while (std::getline(in, line)) {
     std::stringstream ss(line);
     std::string token;
-    
+
     // Read district ID
     std::getline(ss, token, ',');
     int district_id = std::stoi(token);
-    
+
     min_district_id = std::min(min_district_id, district_id);
     max_district_id = std::max(max_district_id, district_id);
 
@@ -72,7 +79,6 @@ void SeasonalPattern::read(const std::string &filename) {
     if (district_id >= district_adjustments.size()) {
       district_adjustments.resize(district_id + 1);
     }
-
 
     // Read seasonal factors
     DoubleVector factors;
@@ -88,8 +94,8 @@ void SeasonalPattern::read(const std::string &filename) {
     // Validate number of factors
     if (factors.size() != period) {
       throw std::runtime_error(
-          fmt::format("Expected {} factors for district {}, got {}", 
-                     period, district_id, factors.size()));
+          fmt::format("Expected {} factors for district {}, got {}", period,
+                      district_id, factors.size()));
     }
 
     // Store the factors directly - no need to expand monthly data
@@ -99,28 +105,36 @@ void SeasonalPattern::read(const std::string &filename) {
   if (SpatialData::get_instance().get_district_count() != -1) {
     // only check if the district count has been initialized
     // check if we have data for all districts
-    // for 1-based indexing the size of district_adjustments should be greater than the district count by 1
+    // for 1-based indexing the size of district_adjustments should be greater
+    // than the district count by 1
     int actual_district_count = max_district_id - min_district_id + 1;
-    if (min_district_id == 1 && district_adjustments.size() != actual_district_count + 1) {
-      throw std::runtime_error(
-          fmt::format("Expected {} districts, got {}", 
-                     actual_district_count + 1, 
-                     district_adjustments.size()));
+    if (min_district_id == 1
+        && district_adjustments.size() != actual_district_count + 1) {
+      throw std::runtime_error(fmt::format("Expected {} districts, got {}",
+                                           actual_district_count + 1,
+                                           district_adjustments.size()));
     }
-    if (actual_district_count != SpatialData::get_instance().get_district_count()) {
+    if (actual_district_count
+        != SpatialData::get_instance().get_district_count()) {
       throw std::runtime_error(
-          fmt::format("Expected {} districts, got {}", 
-                     SpatialData::get_instance().get_district_count(), 
-                     actual_district_count));
+          fmt::format("Expected {} districts, got {}",
+                      SpatialData::get_instance().get_district_count(),
+                      actual_district_count));
     }
   }
 }
 
 double SeasonalPattern::get_seasonal_factor(const date::sys_days &today,
-                                         const int &location) {
+                                            const int &location) {
   int district = get_district_for_location(location);
+  if (district_adjustments.size()
+      == SpatialData::get_instance().get_district_count() + 1) {
+    // handle 1-based indexing
+    district = district + SpatialData::get_instance().get_first_district();
+  }
+
   int doy = TimeHelpers::day_of_year(today);
-  
+
   // Get the month (0-11)
   auto ymd = date::year_month_day{today};
   int month = static_cast<unsigned>(ymd.month()) - 1;

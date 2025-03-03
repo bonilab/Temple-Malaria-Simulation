@@ -284,9 +284,6 @@ public:
    */
   void populate_dependent_data();
 
-  // Refresh the data from the model (i.e., Location DB) to the spatial data
-  void refresh();
-
   // Write the current spatial data to the filename and path indicated, output
   // will be an ASC file
   void write(const std::string &filename, SpatialFileType type);
@@ -303,6 +300,26 @@ public:
 
    // Add method to validate raster information
   bool validate_raster_info(const RasterInformation& new_info, std::string& errors);
+
+  /**
+   * @brief Synchronizes raster data with the location database, loading and validating spatial information.
+   * 
+   * This function performs several key operations to ensure raster data is properly loaded and 
+   * synchronized with the location database:
+   * 
+   * 1. Validates the consistency of all loaded raster files (dimensions, coordinates, cell size)
+   * 2. Initializes the location database if empty by generating locations from raster data
+   * 3. Loads and synchronizes specific raster data into the location database:
+   *    - Beta (transmission intensity) values
+   *    - Population data
+   *    - Treatment rates for under/over 5 years old
+   * 
+   * @throws std::runtime_error if raster files are inconsistent or invalid
+   * 
+   * @note This function should be called after loading new raster files or when the location
+   *       database needs to be updated with raster data.
+   */
+  void sync_raster_data_to_locations();
 };
 
 #endif

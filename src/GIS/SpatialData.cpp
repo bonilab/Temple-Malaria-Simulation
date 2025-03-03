@@ -361,7 +361,7 @@ bool SpatialData::parse(const YAML::Node &node) {
   cell_size = node["cell_size"].as<float>();
 
   // Now convert the rasters into the location space
-  refresh();
+  sync_raster_data_to_locations();
 
   // Grab a reference to the location_db to work with
   auto &location_db = Model::CONFIG->location_db();
@@ -422,8 +422,8 @@ bool SpatialData::parse(const YAML::Node &node) {
     }
   }
 
-  parse_complete();
   populate_dependent_data();
+  parse_complete();
   return true;
 }
 
@@ -508,7 +508,7 @@ void SpatialData::parse_complete() {
   data[SpatialFileType::PrTreatmentOver5].reset();
 }
 
-void SpatialData::refresh() {
+void SpatialData::sync_raster_data_to_locations() {
   // std::cout << "Starting refresh..." << std::endl;
 
   // Check to make sure our data is OK

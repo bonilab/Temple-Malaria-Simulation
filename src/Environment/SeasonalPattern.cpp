@@ -9,9 +9,9 @@
 
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <set>
 #include <sstream>
-#include <map>
 
 #include "GIS/SpatialData.h"
 #include "Helpers/TimeHelpers.h"
@@ -65,7 +65,7 @@ void SeasonalPattern::read(const std::string &filename) {
 
   int min_district_id = std::numeric_limits<int>::max();
   int max_district_id = std::numeric_limits<int>::min();
-  
+
   // Temporary storage for data
   std::map<int, DoubleVector> temp_adjustments;
 
@@ -106,11 +106,11 @@ void SeasonalPattern::read(const std::string &filename) {
   // Determine if input is 0-based or 1-based
   bool is_one_based = (min_district_id == 1);
   bool is_zero_based = (min_district_id == 0);
-  
+
   if (!is_one_based && !is_zero_based) {
-    throw std::runtime_error(
-        fmt::format("District IDs must start at 0 or 1, but found minimum ID: {}", 
-                   min_district_id));
+    throw std::runtime_error(fmt::format(
+        "District IDs must start at 0 or 1, but found minimum ID: {}",
+        min_district_id));
   }
 
   // Calculate actual district count
@@ -118,26 +118,26 @@ void SeasonalPattern::read(const std::string &filename) {
 
   // Validate against SpatialData if available
   if (SpatialData::get_instance().get_district_count() != -1) {
-    if (actual_district_count != SpatialData::get_instance().get_district_count()) {
+    if (actual_district_count
+        != SpatialData::get_instance().get_district_count()) {
       throw std::runtime_error(
           fmt::format("Expected {} districts, got {}",
-                     SpatialData::get_instance().get_district_count(),
-                     actual_district_count));
+                      SpatialData::get_instance().get_district_count(),
+                      actual_district_count));
     }
   }
 
   // Convert to 0-based and store in final vector
   district_adjustments.clear();
   district_adjustments.resize(actual_district_count);
-  for (const auto& [file_id, factors] : temp_adjustments) {
+  for (const auto &[file_id, factors] : temp_adjustments) {
     int zero_based_id = is_one_based ? file_id - 1 : file_id;
     district_adjustments[zero_based_id] = factors;
   }
 
-  LOG(INFO) << fmt::format("Loaded {} districts from {} ({}-based indexing)", 
-                          actual_district_count, 
-                          filename, 
-                          is_one_based ? "1" : "0");
+  LOG(INFO) << fmt::format("Loaded {} districts from {} ({}-based indexing)",
+                           actual_district_count, filename,
+                           is_one_based ? "1" : "0");
 }
 
 double SeasonalPattern::get_seasonal_factor(const date::sys_days &today,

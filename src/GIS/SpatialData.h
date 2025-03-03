@@ -9,10 +9,10 @@
 
 #include <yaml-cpp/yaml.h>
 
-#include <string>
-#include <vector>
 #include <array>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "AscFile.h"
 #include "Core/PropertyMacro.h"
@@ -67,23 +67,21 @@ public:
 
     // The size of the cell, typically in meters
     double cellsize = NOT_SET;
-    
+
     // Validate if the raster information matches another instance
-    bool matches(const RasterInformation& other) const {
-      return number_columns == other.number_columns &&
-             number_rows == other.number_rows &&
-             x_lower_left_corner == other.x_lower_left_corner &&
-             y_lower_left_corner == other.y_lower_left_corner &&
-             cellsize == other.cellsize;
+    bool matches(const RasterInformation &other) const {
+      return number_columns == other.number_columns
+             && number_rows == other.number_rows
+             && x_lower_left_corner == other.x_lower_left_corner
+             && y_lower_left_corner == other.y_lower_left_corner
+             && cellsize == other.cellsize;
     }
 
     // Check if the raster information has been initialized
     bool is_initialized() const {
-      return number_columns != NOT_SET &&
-             number_rows != NOT_SET &&
-             x_lower_left_corner != NOT_SET &&
-             y_lower_left_corner != NOT_SET &&
-             cellsize != NOT_SET;
+      return number_columns != NOT_SET && number_rows != NOT_SET
+             && x_lower_left_corner != NOT_SET && y_lower_left_corner != NOT_SET
+             && cellsize != NOT_SET;
     }
   };
 
@@ -101,7 +99,7 @@ public:
    */
   PROPERTY_REF(std::vector<int>, district_lookup)
 
-// private:
+  // private:
   const std::string BETA_RASTER = "beta_raster";
   const std::string DISTRICT_RASTER = "district_raster";
   const std::string LOCATION_RASTER = "location_raster";
@@ -141,7 +139,18 @@ public:
   // errors
   bool check_catalog(std::string &errors);
 
-  // Generate the locations for the location_db
+  /**
+   * @brief Generates location database from the first available raster file
+   *
+   * This function creates location entries for each valid (non-NODATA) cell in
+   * the raster. Each location is assigned:
+   * - A unique sequential ID
+   * - Row and column coordinates from the raster
+   * - Initial elevation of 0
+   *
+   * @throws std::runtime_error if no valid raster files are available
+   * @throws std::runtime_error if no valid locations are found in the raster
+   */
   void generate_locations();
 
   // Load the given raster file into the spatial catalog and assign the given
@@ -151,9 +160,9 @@ public:
   // Load all the spatial data from the node
   void load_files(const YAML::Node &node);
 
-  // Load the raster indicated into the location_db; works with betas and
-  // probability of treatment
-  void load_raster(SpatialFileType type);
+  // copy the raster to the location_db; works with betas and probability of
+  // treatment
+  void copy_raster_to_location_db(SpatialFileType type);
 
   // Perform any clean-up operations after parsing the YAML file is complete
   void parse_complete();
@@ -248,10 +257,6 @@ public:
   // Get a reference to the AscFile raster, may be a nullptr
   AscFile* get_raster(SpatialFileType type) { return data[type].get(); }
 
-  // Parse the YAML node provided to extract all the relevant information for
-  // the simulation
-  bool parse(const YAML::Node &node);
-
   /**
    * @brief Populates dependent data structures after input data and raster
    * files have been processed.
@@ -291,35 +296,45 @@ public:
   // Reset the singleton instance for testing
   void reset() {
     // Reset each unique_ptr individually
-    for (auto& ptr : data) {
-      ptr.reset();
-    }
+    for (auto &ptr : data) { ptr.reset(); }
     first_district = 0;
     district_count = 0;
   }
 
-   // Add method to validate raster information
-  bool validate_raster_info(const RasterInformation& new_info, std::string& errors);
+  // Add method to validate raster information
+  bool validate_raster_info(const RasterInformation &new_info,
+                            std::string &errors);
+
+private:
+  /**
+   * @brief Loads age distribution data from YAML configuration
+   * @throws std::runtime_error if age distribution data is invalid
+   */
+  void load_age_distribution(const YAML::Node &node);
 
   /**
-   * @brief Synchronizes raster data with the location database, loading and validating spatial information.
-   * 
-   * This function performs several key operations to ensure raster data is properly loaded and 
-   * synchronized with the location database:
-   * 
-   * 1. Validates the consistency of all loaded raster files (dimensions, coordinates, cell size)
-   * 2. Initializes the location database if empty by generating locations from raster data
-   * 3. Loads and synchronizes specific raster data into the location database:
-   *    - Beta (transmission intensity) values
-   *    - Population data
-   *    - Treatment rates for under/over 5 years old
-   * 
-   * @throws std::runtime_error if raster files are inconsistent or invalid
-   * 
-   * @note This function should be called after loading new raster files or when the location
-   *       database needs to be updated with raster data.
+   * @brief Loads treatment data from YAML configuration if not provided by
+   * raster
+   * @throws std::runtime_error if treatment data is invalid
    */
-  void sync_raster_data_to_locations();
+  void load_treatment_data(const YAML::Node &node);
+
+  /**
+   * @brief Loads beta and population data from YAML if not provided by raster
+   * @throws std::runtime_error if required data is missing or invalid
+   */
+  void load_location_data(const YAML::Node &node);
+
+public:
+  /**
+   * @brief Parses spatial configuration from YAML and initializes the spatial
+   * system
+   *
+   * @param node YAML configuration node containing spatial settings
+   * @return true if parsing was successful
+   * @throws std::runtime_error if required configuration is missing or invalid
+   */
+  bool parse(const YAML::Node &node);
 };
 
 #endif

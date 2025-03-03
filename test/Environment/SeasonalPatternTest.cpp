@@ -91,14 +91,14 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
         REQUIRE(pattern != nullptr);
         
         // Test pattern values for location 1
-        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 1, 15), 1), WithinRel(0.5, 0.00001));  // January
-        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 7, 15), 1), WithinRel(1.1, 0.00001)); // July
-        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 12, 15), 1), WithinRel(0.6, 0.00001)); // December
+        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 1, 15), 0), WithinRel(0.5, 0.00001));  // January
+        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 7, 15), 0), WithinRel(1.1, 0.00001)); // July
+        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 12, 15), 0), WithinRel(0.6, 0.00001)); // December
 
         // Test pattern values for location 2
-        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 1, 15), 2), WithinRel(0.6, 0.00001));  // January
-        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 7, 15), 2), WithinRel(1.2, 0.00001)); // July
-        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 12, 15), 2), WithinRel(0.7, 0.00001)); // December
+        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 1, 15), 1), WithinRel(0.6, 0.00001));  // January
+        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 7, 15), 1), WithinRel(1.2, 0.00001)); // July
+        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 12, 15), 1), WithinRel(0.7, 0.00001)); // December
     }
 
     SECTION("Can read daily pattern data") {
@@ -114,9 +114,9 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
         REQUIRE(pattern != nullptr);
         
         // Test pattern values
-        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 1, 1), 1), WithinRel(0.501, 0.00001));
-        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 6, 28), 1), WithinRel(0.68, 0.00001));  // ~day 180
-        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 12, 31), 1), WithinRel(0.865, 0.00001));
+        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 1, 1), 0), WithinRel(0.501, 0.00001));
+        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 6, 28), 0), WithinRel(0.68, 0.00001));  // ~day 180
+        REQUIRE_THAT(pattern->get_seasonal_factor(make_date(2000, 12, 31), 0), WithinRel(0.865, 0.00001));
     }
 
     SECTION("Handles leap year correctly") {
@@ -133,8 +133,8 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
         // Dec 30th (day 365) in leap year should use same value as Dec 31st (day 366)
         auto dec30 = make_date(2000, 12, 30);
         auto dec31 = make_date(2000, 12, 31);
-        REQUIRE_THAT(pattern->get_seasonal_factor(dec30, 1), 
-                    WithinRel(pattern->get_seasonal_factor(dec31, 1), 0.00001));
+        REQUIRE_THAT(pattern->get_seasonal_factor(dec30, 0), 
+                    WithinRel(pattern->get_seasonal_factor(dec31, 0), 0.00001));
     }
 
     SECTION("Handles missing district data") {

@@ -6,6 +6,7 @@
 #include "SpatialData.h"
 
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include <cmath>
 #include <stdexcept>
@@ -18,51 +19,67 @@ SpatialData::SpatialData() = default;  // Array is zero-initialized by default
 
 SpatialData::~SpatialData() = default;  // Let unique_ptr handle cleanup
 
+bool SpatialData::validate_raster_info(const RasterInformation &new_info,
+                                       std::string &errors) {
+  // If raster_info isn't initialized yet, store the new info
+  if (!raster_info.is_initialized()) {
+    raster_info = new_info;
+    return true;
+  }
+
+  // Otherwise validate that the new info matches
+  if (!raster_info.matches(new_info)) {
+    // Use a vector to store error messages
+    std::vector<std::string> error_messages;
+    
+    if (new_info.number_columns != raster_info.number_columns) {
+      error_messages.push_back("mismatched number of columns");
+    }
+    if (new_info.number_rows != raster_info.number_rows) {
+      error_messages.push_back("mismatched number of rows");
+    }
+    if (new_info.x_lower_left_corner != raster_info.x_lower_left_corner) {
+      error_messages.push_back("mismatched x lower left corner");
+    }
+    if (new_info.y_lower_left_corner != raster_info.y_lower_left_corner) {
+      error_messages.push_back("mismatched y lower left corner");
+    }
+    if (new_info.cellsize != raster_info.cellsize) {
+      error_messages.push_back("mismatched cell size");
+    }
+    
+    // Join all error messages with semicolons
+    errors = fmt::format("{};", fmt::join(error_messages, ";"));
+    return false;
+  }
+  return true;
+}
+
 bool SpatialData::check_catalog(std::string &errors) {
-  // Reference parameters
-  AscFile* reference = nullptr;
+  if (!has_raster()) {
+    return true;
+  }
 
-  // Load the parameters from the first entry
-  auto ndx = 0;
-  for (; ndx != SpatialFileType::Count; ndx++) {
-    if (data[ndx]) {
-      reference = data[ndx].get();  // Use .get() to get raw pointer
-      break;
+  for (const auto& raster : data) {
+    if (!raster) { continue; }
+
+    auto ref_raster_info = RasterInformation();
+    ref_raster_info.number_columns = raster->NCOLS;
+    ref_raster_info.number_rows = raster->NROWS;
+    ref_raster_info.x_lower_left_corner = raster->XLLCORNER;
+    ref_raster_info.y_lower_left_corner = raster->YLLCORNER;
+    ref_raster_info.cellsize = raster->CELLSIZE;
+
+    if (!validate_raster_info(ref_raster_info, errors)) {
+      errors = fmt::format("Header mismatch: {}", errors);
+      LOG(ERROR) << errors;
+      dirty = true;
+      return true;
     }
   }
 
-  // If we hit the end, then there must be nothing loaded
-  if (ndx == SpatialFileType::Count) { return true; }
-
-  // Check the remainder of the entries, do this by validating the header
-  for (; ndx != SpatialFileType::Count; ndx++) {
-    if (data[ndx] == nullptr) { continue; }
-    if (data[ndx]->CELLSIZE != reference->CELLSIZE) {
-      errors += "mismatched CELLSIZE;";
-    }
-    if (data[ndx]->NCOLS != reference->NCOLS) { errors += "mismatched NCOLS;"; }
-    if (data[ndx]->NODATA_VALUE != reference->NODATA_VALUE) {
-      errors += "mismatched NODATA_VALUE;";
-    }
-    if (data[ndx]->NROWS != reference->NROWS) { errors += "mismatched NROWS;"; }
-    if (data[ndx]->XLLCENTER != reference->XLLCENTER) {
-      errors += "mismatched XLLCENTER;";
-    }
-    if (data[ndx]->XLLCORNER != reference->XLLCORNER) {
-      errors += "mismatched XLLCORNER;";
-    }
-    if (data[ndx]->YLLCENTER != reference->YLLCENTER) {
-      errors += "mismatched YLLCENTER;";
-    }
-    if (data[ndx]->YLLCORNER != reference->YLLCORNER) {
-      errors += "mismatched YLLCORNER;";
-    }
-  }
-
-  // Set the dirty flag based upon the errors, return the result
-  auto has_errors = !errors.empty();
-  dirty = has_errors;
-  return has_errors;
+  dirty = false;
+  return false;
 }
 
 void SpatialData::generate_distances() const {
@@ -200,7 +217,7 @@ int SpatialData::get_district(int location) {
     return district;
   }
 
-  return district - get_first_district();
+  return district - first_district;
 }
 
 int SpatialData::get_district_count() { return district_count; }
@@ -237,19 +254,7 @@ std::vector<int> SpatialData::get_district_locations(int district) {
 int SpatialData::get_first_district() { return first_district; }
 
 SpatialData::RasterInformation SpatialData::get_raster_header() {
-  RasterInformation results;
-  for (const auto &raster : data) {
-    if (raster) {
-      AscFile* ptr = raster.get();
-      results.number_columns = ptr->NCOLS;
-      results.number_rows = ptr->NROWS;
-      results.x_lower_left_corner = ptr->XLLCORNER;
-      results.y_lower_left_corner = ptr->YLLCORNER;
-      results.cellsize = ptr->CELLSIZE;
-      break;
-    }
-  }
-  return results;
+  return raster_info;
 }
 
 bool SpatialData::has_raster() {

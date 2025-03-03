@@ -67,6 +67,24 @@ public:
 
     // The size of the cell, typically in meters
     double cellsize = NOT_SET;
+    
+    // Validate if the raster information matches another instance
+    bool matches(const RasterInformation& other) const {
+      return number_columns == other.number_columns &&
+             number_rows == other.number_rows &&
+             x_lower_left_corner == other.x_lower_left_corner &&
+             y_lower_left_corner == other.y_lower_left_corner &&
+             cellsize == other.cellsize;
+    }
+
+    // Check if the raster information has been initialized
+    bool is_initialized() const {
+      return number_columns != NOT_SET &&
+             number_rows != NOT_SET &&
+             x_lower_left_corner != NOT_SET &&
+             y_lower_left_corner != NOT_SET &&
+             cellsize != NOT_SET;
+    }
   };
 
   /**
@@ -109,6 +127,9 @@ public:
   // Count of district loaded in the map, default zero, lazy initialization to
   // actual value
   int district_count = -1;
+
+  // Add raster_info as a data member
+  RasterInformation raster_info;
 
   // Constructor
   SpatialData();
@@ -279,6 +300,9 @@ public:
     first_district = 0;
     district_count = 0;
   }
+
+   // Add method to validate raster information
+  bool validate_raster_info(const RasterInformation& new_info, std::string& errors);
 };
 
 #endif

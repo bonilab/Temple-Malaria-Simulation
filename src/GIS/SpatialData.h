@@ -112,9 +112,6 @@ public:
   // Initialize array with nullptr
   std::array<std::unique_ptr<AscFile>, SpatialFileType::Count> data{};
 
-  // Flag to indicate if data has been loaded since the last time it was checked
-  bool dirty = false;
-
   // The size of the cells in the raster, the units shouldn't matter, but this
   // was written when we were using 5x5 km cells
   float cell_size = 0;

@@ -71,12 +71,10 @@ bool SpatialData::check_catalog(std::string &errors) {
     if (!validate_raster_info(ref_raster_info, errors)) {
       errors = fmt::format("Header mismatch: {}", errors);
       LOG(ERROR) << errors;
-      dirty = true;
       return true;
     }
   }
 
-  dirty = false;
   return false;
 }
 
@@ -276,7 +274,6 @@ void SpatialData::load(const std::string &filename, SpatialFileType type) {
   // No need to check and delete, unique_ptr handles it
   VLOG(1) << "Loading " << filename;
   data[type] = std::unique_ptr<AscFile>(AscFileManager::read(filename));
-  dirty = true;
 }
 
 void SpatialData::copy_raster_to_location_db(SpatialFileType type) {
@@ -361,11 +358,10 @@ void SpatialData::load_files(const YAML::Node &node) {
     load(node[TREATMENT_RATE_OVER5].as<std::string>(),
          SpatialData::SpatialFileType::PrTreatmentOver5);
   }
+
   // Check to make sure our data is OK
   std::string errors;
-  // std::cout << "Checking catalog... dirty=" << dirty << std::endl;
-  if (dirty && check_catalog(errors)) {
-    // std::cout << "Catalog errors: " << errors << std::endl;
+  if (check_catalog(errors)) {
     throw std::runtime_error(errors);
   }
 }

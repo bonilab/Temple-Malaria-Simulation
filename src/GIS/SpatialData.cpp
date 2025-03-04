@@ -56,7 +56,7 @@ bool SpatialData::validate_raster_info(const RasterInformation &new_info,
 }
 
 bool SpatialData::check_catalog(std::string &errors) {
-  if (!has_raster()) { return true; }
+  if (!using_raster) { return true; }
 
   for (const auto &raster : data) {
     if (!raster) { continue; }
@@ -208,11 +208,6 @@ SpatialData::RasterInformation SpatialData::get_raster_header() {
   return raster_info;
 }
 
-bool SpatialData::has_raster() {
-  return std::any_of(data.begin(), data.end(),
-                     [](const auto &raster) { return raster != nullptr; });
-}
-
 void SpatialData::load(const std::string &filename, SpatialFileType type) {
   // No need to check and delete, unique_ptr handles it
   VLOG(1) << "Loading " << filename;
@@ -269,37 +264,47 @@ void SpatialData::copy_raster_to_location_db(SpatialFileType type) {
 }
 
 void SpatialData::load_files(const YAML::Node &node) {
+  using_raster = false;  // Reset flag at start
+  
   if (node[LOCATION_RASTER]) {
     load(node[LOCATION_RASTER].as<std::string>(),
          SpatialData::SpatialFileType::Locations);
+    using_raster = true;
   }
   if (node[BETA_RASTER]) {
     load(node[BETA_RASTER].as<std::string>(),
          SpatialData::SpatialFileType::Beta);
+    using_raster = true;
   }
   if (node[POPULATION_RASTER]) {
     load(node[POPULATION_RASTER].as<std::string>(),
          SpatialData::SpatialFileType::Population);
+    using_raster = true;
   }
   if (node[DISTRICT_RASTER]) {
     load(node[DISTRICT_RASTER].as<std::string>(),
          SpatialData::SpatialFileType::Districts);
+    using_raster = true;
   }
   if (node[TRAVEL_RASTER]) {
     load(node[TRAVEL_RASTER].as<std::string>(),
          SpatialData::SpatialFileType::Travel);
+    using_raster = true;
   }
   if (node[ECOCLIMATIC_RASTER]) {
     load(node[ECOCLIMATIC_RASTER].as<std::string>(),
          SpatialData::SpatialFileType::Ecoclimatic);
+    using_raster = true;
   }
   if (node[TREATMENT_RATE_UNDER5]) {
     load(node[TREATMENT_RATE_UNDER5].as<std::string>(),
          SpatialData::SpatialFileType::PrTreatmentUnder5);
+    using_raster = true;
   }
   if (node[TREATMENT_RATE_OVER5]) {
     load(node[TREATMENT_RATE_OVER5].as<std::string>(),
          SpatialData::SpatialFileType::PrTreatmentOver5);
+    using_raster = true;
   }
   // Check to make sure our data is OK
   std::string errors;

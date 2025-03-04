@@ -16,7 +16,7 @@
 void DbReporterDistrict::initialize(int job_number, const std::string &path) {
   // Inform the user of the reporter type and make sure there are districts
   VLOG(1) << "Using DbReporter with aggregation at the district level.";
-  if (!SpatialData::get_instance().has_raster(SpatialData::Districts)) {
+  if (SpatialData::get_instance().location_to_district.size() == 0) {
     LOG(ERROR) << "District raster must be present when aggregating data at "
                   "the district level.";
     throw std::invalid_argument("No district raster present");

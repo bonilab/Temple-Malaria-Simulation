@@ -17,7 +17,7 @@ TEST_CASE_METHOD(BasicOperationsTest, "Basic Raster Loading", "[GIS][Basic]") {
         auto node = createBasicNode();
         
         REQUIRE(spatial_data.parse(node));
-        REQUIRE(spatial_data.has_raster());
+        REQUIRE(spatial_data.using_raster);
         REQUIRE(spatial_data.district_count == 2);  // Districts 1 and 2
     }
 
@@ -26,7 +26,7 @@ TEST_CASE_METHOD(BasicOperationsTest, "Basic Raster Loading", "[GIS][Basic]") {
         auto node = createBasicNode();
         
         REQUIRE(spatial_data.parse(node));
-        REQUIRE(spatial_data.has_raster());
+        REQUIRE(spatial_data.using_raster);
         auto header = spatial_data.get_raster_header();
         REQUIRE(header.number_columns == 3);
         REQUIRE(header.number_rows == 3);
@@ -38,7 +38,7 @@ TEST_CASE_METHOD(BasicOperationsTest, "Basic Raster Loading", "[GIS][Basic]") {
         auto node = createBasicNode();
         
         REQUIRE(spatial_data.parse(node));
-        REQUIRE(spatial_data.has_raster());
+        REQUIRE(spatial_data.using_raster);
         REQUIRE(spatial_data.district_count == 2);
     }
 

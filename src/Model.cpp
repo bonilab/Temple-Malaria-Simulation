@@ -234,8 +234,7 @@ void Model::initialize(int job_number, const std::string &path) {
   }
 
   if (district_movement_) {
-    if (!SpatialData::get_instance().has_raster(
-            SpatialData::SpatialFileType::Districts)) {
+    if (SpatialData::get_instance().location_to_district.size() == 0) {
       LOG(ERROR)
           << "Districts raster must be loaded to track district movements.";
       throw std::runtime_error("--mcd set without districts raster loaded.");

@@ -20,6 +20,8 @@ Version 4.1.10 improves memory management and code quality:
    - Better error handling and null pointer checks
    - More consistent pointer access patterns
    - Cleaner initialization and cleanup
+   - Simplified raster detection with explicit `using_raster` flag
+   - Removed redundant `has_raster()` checks in favor of direct flag access
 
 2. Major improvements to district handling:
    - Direct district ID indexing without adjustments
@@ -29,6 +31,7 @@ Version 4.1.10 improves memory management and code quality:
      * district_to_locations for efficient location retrieval
    - Eliminated redundant district index translations
    - Better handling of district boundaries and validation
+   - Improved district presence checks using location_to_district size
 
 3. Code quality improvements:
    - Removed manual memory management
@@ -38,6 +41,8 @@ Version 4.1.10 improves memory management and code quality:
    - More consistent error handling
    - Simplified district lookup logic
    - Reduced code duplication
+   - Clearer separation between raster and non-raster data paths
+   - Better error messages for configuration conflicts
 
 4. Performance considerations:
    - Optimized pointer access patterns
@@ -46,6 +51,7 @@ Version 4.1.10 improves memory management and code quality:
    - Zero-cost abstractions for pointer management
    - O(1) district and location lookups
    - Pre-computed mappings to avoid repeated calculations
+   - Simplified raster state tracking
 
 5. Add UnitTest for SpatialData and SeasonalPattern
 

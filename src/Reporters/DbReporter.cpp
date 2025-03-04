@@ -95,7 +95,7 @@ void DbReporter::prepare_configuration(pqxx::connection* connection) {
   }
 
   // Prepare the correct query depending on if there is a raster or not
-  if (SpatialData::get_instance().has_raster()) {
+  if (SpatialData::get_instance().using_raster) {
     SpatialData::RasterInformation header =
         SpatialData::get_instance().get_raster_header();
     query =
@@ -123,8 +123,7 @@ void DbReporter::prepare_configuration(pqxx::connection* connection) {
   }
 
   // Check to see if districts were loaded
-  auto districts = SpatialData::get_instance().has_raster(
-      SpatialData::SpatialFileType::Districts);
+  auto has_districts = SpatialData::get_instance().location_to_district.size() > 0;
 
   // Prepare the loader query
   query = "";
@@ -133,8 +132,8 @@ void DbReporter::prepare_configuration(pqxx::connection* connection) {
     auto x = (int)location.coordinate->latitude;
     auto y = (int)location.coordinate->longitude;
 
-    if (districts) {
-      auto district = SpatialData::get_instance().get_district(ndx);
+    if (has_districts) {
+      auto district = SpatialData::get_instance().location_to_district[ndx];
       query.append(fmt::format(INSERT_LOCATION_DISTRICT, config_id, ndx, x, y,
                                location.beta, district));
     } else {

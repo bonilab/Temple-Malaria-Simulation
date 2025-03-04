@@ -82,9 +82,15 @@ struct convert<std::vector<Spatial::Location>> {
           "the file?");
     }
 
-    // If the user is supplying raster data, location_info will likely not be
-    // there. Since we are just decoding the file, just focus on loading the
-    // data and defer validation of the file to the recipent of the data
+    // If the user is supplying both raster and location_info, then we need to
+    // throw an error
+    if (SpatialData::get_instance().using_raster) {
+      throw std::runtime_error(
+          "location_db has already been instantaied, is a raster_db present in "
+          "the file?");
+    }
+
+    // Otherwise, we need to parse the location_info node
     auto number_of_locations = node["location_info"].size();
     for (std::size_t i = 0; i < number_of_locations; i++) {
       location_db.emplace_back(node["location_info"][i][0].as<int>(),
@@ -123,31 +129,19 @@ struct convert<std::vector<Spatial::Location>> {
               .as<float>();
     }
 
-    // If a raster was loaded for these items then use that instead
-    if (SpatialData::get_instance().has_raster(
-            SpatialData::SpatialFileType::Beta)) {
-      LOG(WARNING) << "Beta raster and value supplied, ignoring "
-                      "beta_by_location setting";
-    } else {
-      for (std::size_t loc = 0; loc < number_of_locations; loc++) {
-        auto input_loc =
-            node["beta_by_location"].size() < number_of_locations ? 0 : loc;
-        location_db[loc].beta = node["beta_by_location"][input_loc].as<float>();
-      }
+    for (std::size_t loc = 0; loc < number_of_locations; loc++) {
+      auto input_loc =
+          node["beta_by_location"].size() < number_of_locations ? 0 : loc;
+      location_db[loc].beta = node["beta_by_location"][input_loc].as<float>();
     }
-    if (SpatialData::get_instance().has_raster(
-            SpatialData::SpatialFileType::Population)) {
-      LOG(WARNING) << "Population raster and value supplied, ignoring "
-                      "population_size_by_location setting";
-    } else {
-      for (std::size_t loc = 0; loc < number_of_locations; loc++) {
-        auto input_loc =
+
+    for (std::size_t loc = 0; loc < number_of_locations; loc++) {
+      auto input_loc =
             node["population_size_by_location"].size() < number_of_locations
                 ? 0
                 : loc;
         location_db[loc].population_size =
             node["population_size_by_location"][input_loc].as<int>();
-      }
     }
 
     return true;

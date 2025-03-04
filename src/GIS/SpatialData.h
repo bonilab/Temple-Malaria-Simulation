@@ -97,8 +97,6 @@ public:
   const std::string TREATMENT_RATE_UNDER5 = "pr_treatment_under5";
   const std::string TREATMENT_RATE_OVER5 = "pr_treatment_over5";
 
-  // Initialize array with nullptr
-  std::array<std::unique_ptr<AscFile>, SpatialFileType::Count> data{};
 
   // The size of the cells in the raster, the units shouldn't matter, but this
   // was written when we were using 5x5 km cells
@@ -134,11 +132,24 @@ public:
   // Index is 0 to max_district_id+1 to handle both 0-based and 1-based IDs
   std::vector<std::vector<int>> district_to_locations;
 
+  // true if any raster file has been loaded, false otherwise
+  bool using_raster = false;
+
   // Constructor
   SpatialData();
 
   // Deconstructor
   ~SpatialData();
+
+  /**
+   * @brief Parses spatial configuration from YAML and initializes the spatial
+   * system
+   *
+   * @param node YAML configuration node containing spatial settings
+   * @return true if parsing was successful
+   * @throws std::runtime_error if required configuration is missing or invalid
+   */
+  bool parse(const YAML::Node &node);
 
   // Check the loaded spatial catalog for errors, returns true if there are
   // errors
@@ -187,12 +198,6 @@ public:
 
   // Return the raster header or the default structure if no raster are loaded
   RasterInformation get_raster_header();
-
-  // Return true if any raster file has been loaded, false otherwise
-  bool has_raster();
-
-  // Return true if a raster file has been loaded, false otherwise
-  bool has_raster(SpatialFileType type) { return data[type] != nullptr; }
 
   // Generate the Euclidean distances for the location_db
   void generate_distances() const;
@@ -306,16 +311,8 @@ private:
    */
   void load_location_data(const YAML::Node &node);
 
-public:
-  /**
-   * @brief Parses spatial configuration from YAML and initializes the spatial
-   * system
-   *
-   * @param node YAML configuration node containing spatial settings
-   * @return true if parsing was successful
-   * @throws std::runtime_error if required configuration is missing or invalid
-   */
-  bool parse(const YAML::Node &node);
+  // Initialize array with nullptr
+  std::array<std::unique_ptr<AscFile>, SpatialFileType::Count> data{};
 };
 
 #endif

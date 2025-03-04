@@ -16,9 +16,9 @@ TEST_CASE_METHOD(DistrictOperationsTest, "District Mapping Operations", "[GIS][D
         auto& spatial_data = SpatialData::get_instance();
         
         // Test various locations
-        REQUIRE(spatial_data.get_district(0) == 0);  // First cell, district 1
-        REQUIRE(spatial_data.get_district(2) == 1);  // Third cell, district 2
-        REQUIRE(spatial_data.get_district(4) == 1);  // Fifth cell, district 2
+        REQUIRE(spatial_data.get_district(0) == 1);  // First cell, district 1
+        REQUIRE(spatial_data.get_district(2) == 2);  // Third cell, district 2
+        REQUIRE(spatial_data.get_district(4) == 2);  // Fifth cell, district 2
     }
 
     SECTION("Get district locations") {
@@ -26,7 +26,7 @@ TEST_CASE_METHOD(DistrictOperationsTest, "District Mapping Operations", "[GIS][D
         
         // Test district 1
         auto locations_d1 = spatial_data.get_district_locations(1);
-        REQUIRE(locations_d1.size() == 3);  // District 1 has 2 cells
+        REQUIRE(locations_d1.size() == 3);  // District 1 has 3 cells
         
         // Test district 2
         auto locations_d2 = spatial_data.get_district_locations(2);

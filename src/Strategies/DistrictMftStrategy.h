@@ -6,6 +6,7 @@
 #ifndef POMS_DISTRICTMFTSTRATEGY_H
 #define POMS_DISTRICTMFTSTRATEGY_H
 
+#include <memory>  // Add this for unique_ptr
 #include "Core/PropertyMacro.h"
 #include "IStrategy.h"
 
@@ -20,17 +21,30 @@ public:
   };
 
 private:
-  std::map<int, MftStrategy*> district_strategies;
+  std::map<int, std::unique_ptr<MftStrategy>> district_strategies;
 
 public:
   DistrictMftStrategy();
-  ~DistrictMftStrategy() override = default;
+  ~DistrictMftStrategy() override = default;  // unique_ptr handles cleanup automatically
 
   // Override the method for IStrategy and throw an error if called.
   void add_therapy(Therapy* therapy) override;
 
-  // Associate the given MFT with the indicated district
-  void assign_mft(int district, MftStrategy* mft);
+  /**
+   * @brief Sets the Multiple First-line Therapy (MFT) strategy for a specific district
+   *
+   * This function assigns a treatment strategy to a district. Each district can only 
+   * have one strategy assigned, and the assignment cannot be changed once set.
+   *
+   * @param district The district ID (matches IDs from district raster file)
+   * @param strategy The MFT strategy to be assigned
+   * 
+   * @throws std::out_of_range If district ID is outside valid range
+   * @throws std::runtime_error If district already has a strategy assigned
+   * 
+   * @note District IDs should match those in the district raster file (can be 0-based or 1-based)
+   */
+  void set_district_strategy(int district, std::unique_ptr<MftStrategy> strategy);
 
   // Get the therapy that should be given to the individual.
   Therapy* get_therapy(Person* person) override;

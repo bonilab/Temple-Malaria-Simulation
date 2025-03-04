@@ -20,16 +20,17 @@ protected:
             Model::CONFIG = new Config();
         }
 
-        // Set up basic Model configuration directly
-        Model::CONFIG->number_of_locations() = 8;  // Match with actual locations
+        Model::CONFIG->number_of_locations() = 0;
+        // // Set up basic Model configuration directly
+        // Model::CONFIG->number_of_locations() = 8;  // Match with actual locations
 
-        // Initialize location database with basic structure
-        auto& location_db = Model::CONFIG->location_db();
-        location_db.clear();
-        location_db.reserve(8);
-        for (int i = 0; i < 8; i++) {
-            location_db.emplace_back(i, i/3, i%3, 0);  // id, row, col, beta
-        }
+        // // Initialize location database with basic structure
+        // auto& location_db = Model::CONFIG->location_db();
+        // location_db.clear();
+        // location_db.reserve(8);
+        // for (int i = 0; i < 8; i++) {
+        //     location_db.emplace_back(i, i/3, i%3, 0);  // id, row, col, beta
+        // }
 
         // Initialize spatial data
         auto& spatial_data = SpatialData::get_instance();
@@ -81,6 +82,8 @@ protected:
     void TearDown() {
         cleanup_files();
         SpatialData::get_instance().reset();
+        Model::CONFIG->number_of_locations() = 0;
+        Model::CONFIG->location_db().clear();
         
         if (Model::CONFIG != nullptr) {
             delete Model::CONFIG;

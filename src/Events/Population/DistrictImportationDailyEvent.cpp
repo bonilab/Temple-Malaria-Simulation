@@ -41,17 +41,8 @@ void DistrictImportationDailyEvent::execute() {
 
   if (number_of_importation_cases == 0) { return; }
 
-  // TODO: introduce static variable for the district locations to improve
-  // performance
-  auto district_lookup = SpatialData::get_instance().district_lookup();
-  std::vector<int> locations;
 
-  // the input district is 1-based, but the district_lookup is 0-based
-  const auto actual_district =
-      district_ - SpatialData::get_instance().get_first_district();
-  for (auto i = 0; i < district_lookup.size(); i++) {
-    if (district_lookup[i] == actual_district) { locations.push_back(i); }
-  }
+  const auto &locations = SpatialData::get_instance().get_district_locations(district_);
 
   auto* pi =
       Model::POPULATION->get_person_index<PersonIndexByLocationStateAgeClass>();

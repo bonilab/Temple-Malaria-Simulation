@@ -117,27 +117,28 @@ void SeasonalPattern::read(const std::string &filename) {
   int actual_district_count = max_district_id - min_district_id + 1;
 
   // Validate against SpatialData if available
-  if (SpatialData::get_instance().get_district_count() != -1) {
+  if (SpatialData::get_instance().district_count != -1) {
     if (actual_district_count
-        != SpatialData::get_instance().get_district_count()) {
+        != SpatialData::get_instance().district_count) {
       throw std::runtime_error(
           fmt::format("Expected {} districts, got {}",
-                      SpatialData::get_instance().get_district_count(),
+                      SpatialData::get_instance().district_count,
                       actual_district_count));
     }
   }
 
-  // Convert to 0-based and store in final vector
+  // Size the vector to accommodate direct indexing (size = count for 0-based, count+1 for 1-based)
   district_adjustments.clear();
-  district_adjustments.resize(actual_district_count);
+  district_adjustments.resize(min_district_id == 0 ? actual_district_count : actual_district_count + 1);
+  
+  // Store factors using original district IDs directly
   for (const auto &[file_id, factors] : temp_adjustments) {
-    int zero_based_id = is_one_based ? file_id - 1 : file_id;
-    district_adjustments[zero_based_id] = factors;
+    district_adjustments[file_id] = factors;
   }
 
   LOG(INFO) << fmt::format("Loaded {} districts from {} ({}-based indexing)",
                            actual_district_count, filename,
-                           is_one_based ? "1" : "0");
+                           min_district_id);
 }
 
 double SeasonalPattern::get_seasonal_factor(const date::sys_days &today,

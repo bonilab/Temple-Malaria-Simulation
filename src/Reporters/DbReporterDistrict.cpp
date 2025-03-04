@@ -28,15 +28,14 @@ void DbReporterDistrict::initialize(int job_number, const std::string &path) {
   // Build a lookup for location to district
   for (auto loc = 0; loc < Model::CONFIG->number_of_locations(); loc++) {
     district_lookup.emplace_back(
-        SpatialData::get_instance().get_raster_district(loc));
+        SpatialData::get_instance().get_district(loc));
   }
 }
 
 void DbReporterDistrict::monthly_genome_data(int id, std::string &query) {
   // Cache some values
   auto genotypes = Model::CONFIG->number_of_parasite_types();
-  auto districts = SpatialData::get_instance().get_district_count();
-  auto first_index = SpatialData::get_instance().get_first_district();
+  auto districts = SpatialData::get_instance().district_count;
   auto* index =
       Model::POPULATION->get_person_index<PersonIndexByLocationStateAgeClass>();
   auto age_classes = index->vPerson()[0][0].size();
@@ -58,7 +57,7 @@ void DbReporterDistrict::monthly_genome_data(int id, std::string &query) {
   // Iterate over all the possible states
   for (auto location = 0; location < index->vPerson().size(); location++) {
     // Get the current index and apply the off set, so we are zero aligned
-    auto district = district_lookup[location] - first_index;
+    auto district = district_lookup[location];
     int infectedIndividuals = 0;
 
     for (auto hs = 0; hs < Person::NUMBER_OF_STATE - 1; hs++) {
@@ -116,7 +115,7 @@ void DbReporterDistrict::monthly_genome_data(int id, std::string &query) {
     for (auto genotype = 0; genotype < genotypes; genotype++) {
       if (weightedOccurrences[district][genotype] == 0) { continue; }
       insert_genotypes.append(
-          fmt::format(INSERT_GENOTYPE_ROW, id, (district + first_index),
+          fmt::format(INSERT_GENOTYPE_ROW, id, (district),
                       genotype, occurrences[district][genotype],
                       clinicalOccurrences[district][genotype],
                       occurrencesZeroToFive[district][genotype],
@@ -125,7 +124,7 @@ void DbReporterDistrict::monthly_genome_data(int id, std::string &query) {
     }
     update_infections.append(fmt::format(UPDATE_INFECTED_INDIVIDUALS,
                                          infections_district[district], id,
-                                         (district + first_index)));
+                                         (district)));
   }
 
   // Check to see if there is no data
@@ -145,8 +144,7 @@ void DbReporterDistrict::monthly_genome_data(int id, std::string &query) {
 void DbReporterDistrict::monthly_infected_individuals(int id,
                                                       std::string &query) {
   // Cache some values and prepare the data structure
-  auto districts = SpatialData::get_instance().get_district_count();
-  auto first_index = SpatialData::get_instance().get_first_district();
+  auto districts = SpatialData::get_instance().district_count;
   auto* index =
       Model::POPULATION->get_person_index<PersonIndexByLocationStateAgeClass>();
   auto age_classes = index->vPerson()[0][0].size();
@@ -163,7 +161,7 @@ void DbReporterDistrict::monthly_infected_individuals(int id,
           }
 
           // Calculate the correct index and update the count
-          auto district = district_lookup[location] - first_index;
+          auto district = district_lookup[location];
           infections_district[district]++;
         }
       }
@@ -174,15 +172,14 @@ void DbReporterDistrict::monthly_infected_individuals(int id,
   for (auto district = 0; district < districts; district++) {
     query.append(fmt::format(UPDATE_INFECTED_INDIVIDUALS,
                              infections_district[district], id,
-                             (district + first_index)));
+                             (district)));
   }
 }
 
 void DbReporterDistrict::monthly_site_data(int id, std::string &query) {
   // Prepare the data structures
   auto age_classes = Model::CONFIG->age_structure();
-  auto districts = SpatialData::get_instance().get_district_count();
-  auto first_index = SpatialData::get_instance().get_first_district();
+  auto districts = SpatialData::get_instance().district_count;
   std::vector<double> eir(districts, 0);
   std::vector<double> pfpr_under5(districts, 0);
   std::vector<double> pfpr_2to10(districts, 0);
@@ -204,7 +201,7 @@ void DbReporterDistrict::monthly_site_data(int id, std::string &query) {
     if (location_population == 0) { continue; }
 
     // Note the district we are in, make sure things are zero indexed
-    auto district = district_lookup[location] - first_index;
+    auto district = district_lookup[location];
 
     // Collect the simple data
     population[district] += location_population;
@@ -266,7 +263,7 @@ void DbReporterDistrict::monthly_site_data(int id, std::string &query) {
   query.append(INSERT_SITE_PREFIX);
   for (auto district = 0; district < districts; district++) {
     query.append(fmt::format(
-        INSERT_SITE_ROW, id, (district + first_index), population[district],
+        INSERT_SITE_ROW, id, (district), population[district],
         clinical_episodes[district], treatments[district],
         (eir[district] != 0) ? (eir[district] / population[district]) : 0,
         (pfpr_under5[district] != 0)

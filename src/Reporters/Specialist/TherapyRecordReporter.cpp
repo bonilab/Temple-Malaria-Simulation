@@ -86,7 +86,7 @@ void TherapyRecordReporter::district_report(int id,
                                             pqxx::connection* connection) {
   // Cache some values
   auto therapies = Model::CONFIG->therapy_db().size();
-  auto first_index = SpatialData::get_instance().get_first_district();
+  auto first_index = SpatialData::get_instance().min_district_id;
 
   // Setup our storage
   std::vector<std::vector<int>> success(lookup_allocation,

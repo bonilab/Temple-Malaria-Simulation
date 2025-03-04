@@ -141,7 +141,6 @@ void SpatialData::generate_locations() {
   for (int row = 0; row < reference->NROWS; ++row) {
     for (int col = 0; col < reference->NCOLS; ++col) {
       if (reference->data[row][col] == no_data) { continue; }
-
       db.emplace_back(location_id++, row, col, 0);
     }
   }
@@ -163,26 +162,7 @@ void SpatialData::generate_locations() {
                          location_count, 100.0 * location_count / max_size);
 }
 
-// NOTE: this function return distrct_id in NON_ZERO based index given a
-// location
-int SpatialData::get_raster_district(int location) {
-  // Throw an error if there are no districts
-  if (data[SpatialFileType::Districts] == nullptr) {
-    throw std::runtime_error(
-        fmt::format("{} called without district data loaded", __FUNCTION__));
-  }
-
-  // Get the coordinate of the location
-  auto &coordinate = Model::CONFIG->location_db()[location].coordinate;
-
-  // Use the x, y to get the district id
-  auto district =
-      (int)data[SpatialFileType::Districts]
-          ->data[(int)coordinate->latitude][(int)coordinate->longitude];
-  return district;
-}
-
-int SpatialData::get_district(int location) {
+int SpatialData::get_district_from_raster(int location) {
   // Check if location is within bounds
   if (location < 0 || location >= Model::CONFIG->number_of_locations()) {
     throw std::out_of_range(fmt::format("{} called with invalid location: {}",
@@ -220,46 +200,9 @@ int SpatialData::get_district(int location) {
       static_cast<int>(data[SpatialFileType::Districts]->data[static_cast<int>(
           coordinate->latitude)][static_cast<int>(coordinate->longitude)]);
 
-  // If it's a NODATA value, return it without adjusting
-  if (district == data[SpatialFileType::Districts]->NODATA_VALUE) {
-    return district;
-  }
-
-  return district - first_district;
+  return district;
 }
 
-int SpatialData::get_district_count() { return district_count; }
-
-std::vector<int> SpatialData::get_district_locations(int district) {
-  // Throw an error if there are no districts
-  if (data[SpatialFileType::Districts] == nullptr) {
-    throw std::runtime_error(
-        fmt::format("{} called without district data loaded", __FUNCTION__));
-  }
-
-  // Prepare our data
-  std::vector<int> locations;
-  AscFile* reference = data[SpatialFileType::Districts].get();  // Use .get()
-
-  // Scan the district raster and use it to generate the location ids, the logic
-  // here is the same as the generation of the location ids in
-  // generate_locations
-  auto id = -1;
-  for (auto ndx = 0; ndx < reference->NROWS; ndx++) {
-    for (auto ndy = 0; ndy < reference->NCOLS; ndy++) {
-      if (reference->data[ndx][ndy] == reference->NODATA_VALUE) { continue; }
-      id++;
-      if ((int)reference->data[ndx][ndy] == district) {
-        locations.emplace_back(id);
-      }
-    }
-  }
-
-  // Return the results
-  return locations;
-}
-
-int SpatialData::get_first_district() { return first_district; }
 
 SpatialData::RasterInformation SpatialData::get_raster_header() {
   return raster_info;
@@ -358,7 +301,6 @@ void SpatialData::load_files(const YAML::Node &node) {
     load(node[TREATMENT_RATE_OVER5].as<std::string>(),
          SpatialData::SpatialFileType::PrTreatmentOver5);
   }
-
   // Check to make sure our data is OK
   std::string errors;
   if (check_catalog(errors)) {
@@ -391,7 +333,7 @@ bool SpatialData::parse(const YAML::Node &node) {
   load_location_data(node);
   load_treatment_data(node);
 
-  // Finalize setup, populate district lookup and reset rasters
+  // Finalize setup, populate location_to_district, district_to_locations, and reset rasters
   populate_dependent_data();
   parse_complete();
   return true;
@@ -496,19 +438,21 @@ void SpatialData::load_location_data(const YAML::Node &node) {
 }
 
 void SpatialData::populate_dependent_data() {
-  // populate the district lookup
+  // populate the location_to_district and district_to_locations
   if (!data[SpatialFileType::Districts]) {
-    district_lookup_.clear();
+    location_to_district.clear();
+    district_to_locations.clear();
     district_count = -1;
-    first_district = -1;
+    min_district_id = -1;
+    max_district_id = -1;
     return;
   }
 
   // Get a reference to the districts raster for cleaner code
   AscFile* districts_raster = data[SpatialFileType::Districts].get();
 
-  int min_district_id = std::numeric_limits<int>::max();
-  int max_district_id = std::numeric_limits<int>::min();
+  min_district_id = std::numeric_limits<int>::max();
+  max_district_id = std::numeric_limits<int>::min();
 
   // Perform a consistency check on the districts
   std::set<int> unique_districts;  // Use a set to count unique districts
@@ -534,20 +478,14 @@ void SpatialData::populate_dependent_data() {
         min_district_id, max_district_id));
   }
 
-  // Sort the districts to check indexing
-  std::vector<int> districts(unique_districts.begin(), unique_districts.end());
-  std::sort(districts.begin(), districts.end());
-
   // Determine if we're using 0-based or 1-based indexing
-  if (districts.front() == 0) {
-    first_district = 0;
+  if (min_district_id == 0) {
     LOG(INFO) << "File suggests zero-based district numbering.";
-  } else if (districts.front() == 1) {
-    first_district = 1;
+  } else if (min_district_id == 1) {
     LOG(INFO) << "File suggests one-based district numbering.";
   } else {
     LOG(ERROR) << "Index of first district must be zero or one, found "
-               << districts.front();
+               << min_district_id;
     throw std::invalid_argument(
         "District raster must be zero-based or one-based.");
   }
@@ -555,17 +493,40 @@ void SpatialData::populate_dependent_data() {
   // Log information about the districts
   LOG(INFO) << fmt::format(
       "Districts loaded with {} districts (IDs from {} to {})", district_count,
-      districts.front(), districts.back());
+      min_district_id, max_district_id);
 
-  // district_lookup must be populated after populate the first_district and
-  // district_count
-  district_lookup_.clear();
-  for (auto loc = 0; loc < Model::CONFIG->number_of_locations(); loc++) {
-    district_lookup_.emplace_back(
-        SpatialData::get_instance().get_district(loc));
+  // Update location_to_district and prepare district_to_locations
+  location_to_district.clear();
+  district_to_locations.clear();
+  
+  if (data[SpatialFileType::Districts]) {
+    // Size the vectors appropriately
+    district_to_locations.resize(max_district_id + 1);
+    location_to_district.reserve(Model::CONFIG->number_of_locations());
+
+    // Single pass through locations to populate both mappings
+    for (auto loc = 0; loc < Model::CONFIG->number_of_locations(); loc++) {
+      auto district = get_district_from_raster(loc);
+      location_to_district.push_back(district);
+      district_to_locations[district].push_back(loc);
+    }
+
+    LOG(INFO) << fmt::format("location_to_district loaded with {} pixels", 
+                            location_to_district.size());
+    LOG(INFO) << fmt::format("district_to_locations created with size of {} for {}-based districts", 
+                            district_to_locations.size(), min_district_id);
   }
-  LOG(INFO) << fmt::format("District_lookup loaded with {} pixels",
-                           district_lookup_.size());
+}
+
+int SpatialData::get_district(int location) {
+  if (location < 0 || location >= Model::CONFIG->number_of_locations()) {
+    throw std::out_of_range(fmt::format("{} called with invalid location: {}",
+                                        __FUNCTION__, location));
+  }
+  if (location_to_district.empty()) {
+    throw std::runtime_error("location_to_district not initialized");
+  }
+  return location_to_district[location];
 }
 
 void SpatialData::parse_complete() {
@@ -586,4 +547,17 @@ void SpatialData::write(const std::string &filename, SpatialFileType type) {
 
   // Write the data
   AscFileManager::write(data[type].get(), filename);
+}
+
+const std::vector<int>& SpatialData::get_district_locations(int district) const {
+  if (district_to_locations.empty()) {
+    throw std::runtime_error("District to locations mapping not initialized");
+  }
+  
+  // Direct indexing without adjustment
+  if (district >= district_to_locations.size()) {
+    throw std::out_of_range(fmt::format("Invalid district ID: {}", district));
+  }
+  
+  return district_to_locations[district];
 }

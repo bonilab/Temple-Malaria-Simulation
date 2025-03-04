@@ -100,7 +100,7 @@ void MovementReporter::initialize(int job_number, const std::string &path) {
     // Since we are only inserting actual movement (i.e., district A to district
     // B) cells with zero are not as big of a concern (baring any memory
     // considerations).
-    division_count = SpatialData::get_instance().get_district_count();
+    division_count = SpatialData::get_instance().district_count;
     if (division_count == -1) {
       VLOG(1) << "District not loaded";
       return;

@@ -18,7 +18,7 @@ TEST_CASE_METHOD(BasicOperationsTest, "Basic Raster Loading", "[GIS][Basic]") {
         
         REQUIRE(spatial_data.parse(node));
         REQUIRE(spatial_data.has_raster());
-        REQUIRE(spatial_data.get_district_count() == 2);  // Districts 1 and 2
+        REQUIRE(spatial_data.district_count == 2);  // Districts 1 and 2
     }
 
     SECTION("Load population raster") {
@@ -39,7 +39,7 @@ TEST_CASE_METHOD(BasicOperationsTest, "Basic Raster Loading", "[GIS][Basic]") {
         
         REQUIRE(spatial_data.parse(node));
         REQUIRE(spatial_data.has_raster());
-        REQUIRE(spatial_data.get_district_count() == 2);
+        REQUIRE(spatial_data.district_count == 2);
     }
 
     TearDown();

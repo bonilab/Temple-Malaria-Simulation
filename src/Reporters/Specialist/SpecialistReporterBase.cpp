@@ -32,12 +32,11 @@ void SpecialistReporterBase::build_lookup(pqxx::connection* connection) {
     // District reporting just requires that we build a look-up where each cell
     // is mapped to the array index, and the array stores the district
     // identification
-    auto offset = SpatialData::get_instance().get_first_district();
+    auto offset = SpatialData::get_instance().min_district_id;
     for (auto loc = 0; loc < Model::CONFIG->number_of_locations(); loc++) {
-      lookup.emplace_back(SpatialData::get_instance().get_raster_district(loc)
-                          - offset);
+      lookup.emplace_back(SpatialData::get_instance().get_district(loc) - offset);
     }
-    lookup_allocation = SpatialData::get_instance().get_district_count();
+    lookup_allocation = SpatialData::get_instance().district_count;
 
   } else if (aggregation == "C") {
     // We must be doing a cellular count, which can be loaded from the database

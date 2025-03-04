@@ -15,11 +15,14 @@
 #include "Model.h"
 #include "Population/Person.h"
 
+// TODO : fix for 0-1 based indexing
 DistrictMftStrategy::DistrictMftStrategy()
     : IStrategy("DistrictMFT", StrategyType::DistrictMftStrategy) {
-  for (auto ndx = 0; ndx < SpatialData::get_instance().get_district_count();
-       ndx++) {
-    district_strategies[ndx] = nullptr;
+  // Size the map to accommodate either 0-based or 1-based district IDs
+  // Pre-populate map with nullptr entries for all possible district IDs
+  auto vectorSize = SpatialData::get_instance().max_district_id + 1;
+  for (int i = 0; i < vectorSize; i++) {
+    district_strategies[i] = nullptr;
   }
 }
 
@@ -28,15 +31,27 @@ void DistrictMftStrategy::add_therapy(Therapy* therapy) {
       "Invalid function called to add therapy to the District MFT Strategy.");
 }
 
-void DistrictMftStrategy::assign_mft(int district, MftStrategy* mft) {
-  district_strategies[district] = mft;
+void DistrictMftStrategy::set_district_strategy(int district, std::unique_ptr<MftStrategy> strategy) {
+  // Validate district ID is within bounds
+  if (district < 0 || district >= district_strategies.size()) {
+    throw std::out_of_range(fmt::format("District ID {} is out of valid range [0, {}]",
+                                       district, district_strategies.size() - 1));
+  }
+
+  // Check if district already has a strategy assigned
+  if (district_strategies[district] != nullptr) {
+    throw std::runtime_error(fmt::format("District {} already has an MFT strategy assigned",
+                                       district));
+  }
+
+  // Move the unique_ptr to our map
+  district_strategies[district] = std::move(strategy);
 }
 
 Therapy* DistrictMftStrategy::get_therapy(Person* person) {
   // Resolve the MFT for this district
-  auto district =
-      SpatialData::get_instance().get_raster_district(person->location());
-  auto mft = district_strategies[district];
+  auto district = SpatialData::get_instance().get_district(person->location());
+  auto mft = district_strategies[district].get();
 
   // Select the therapy to give the individual
   auto pr = Model::RANDOM->random_flat(0.0, 1.0);

@@ -43,8 +43,8 @@ protected:
   std::vector<std::string> insert_values;
 
 private:
-  void reset_site_data_structures(int numDistricts, size_t numAgeClasses);
-  void reset_genome_data_structures(int numDistricts, size_t numGenotypes);
+  void reset_site_data_structures(int vectorSize, size_t numAgeClasses);
+  void reset_genome_data_structures(int vectorSize, size_t numGenotypes);
   void count_infections_for_location(int location);
   void collect_site_data_for_location(int location);
   void calculate_and_build_up_site_data_insert_values(int monthId);

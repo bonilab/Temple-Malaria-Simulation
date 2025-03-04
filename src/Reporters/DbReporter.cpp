@@ -134,7 +134,7 @@ void DbReporter::prepare_configuration(pqxx::connection* connection) {
     auto y = (int)location.coordinate->longitude;
 
     if (districts) {
-      auto district = SpatialData::get_instance().get_raster_district(ndx);
+      auto district = SpatialData::get_instance().get_district(ndx);
       query.append(fmt::format(INSERT_LOCATION_DISTRICT, config_id, ndx, x, y,
                                location.beta, district));
     } else {

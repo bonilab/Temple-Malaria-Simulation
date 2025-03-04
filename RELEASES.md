@@ -21,20 +21,33 @@ Version 4.1.10 improves memory management and code quality:
    - More consistent pointer access patterns
    - Cleaner initialization and cleanup
 
-2. Code quality improvements:
+2. Major improvements to district handling:
+   - Direct district ID indexing without adjustments
+   - Support for both 0-based and 1-based district IDs
+   - Pre-computed bidirectional mappings:
+     * location_to_district for O(1) district lookups
+     * district_to_locations for efficient location retrieval
+   - Eliminated redundant district index translations
+   - Better handling of district boundaries and validation
+
+3. Code quality improvements:
    - Removed manual memory management
    - Eliminated potential memory leaks
    - Improved type safety
    - Better const correctness
    - More consistent error handling
+   - Simplified district lookup logic
+   - Reduced code duplication
 
-3. Performance considerations:
+4. Performance considerations:
    - Optimized pointer access patterns
    - Reduced overhead from manual memory management
    - Cache-friendly data structures
    - Zero-cost abstractions for pointer management
+   - O(1) district and location lookups
+   - Pre-computed mappings to avoid repeated calculations
 
-4. Add UnitTest for SpatialData
+5. Add UnitTest for SpatialData and SeasonalPattern
 
 These changes improve the robustness and maintainability of the spatial data handling system while maintaining the existing functionality and performance characteristics.
 

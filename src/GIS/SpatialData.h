@@ -85,19 +85,7 @@ public:
     }
   };
 
-  /**
-   * @brief This property holds a pre-populated map from location to district
-   * using a 0-based index.
-   *
-   * The vector contains indices where each element represents a specific
-   * location, and the value at each index corresponds to the district that
-   * location belongs to. This mapping is essential for quickly determining the
-   * district of any given location within the simulation. It is assumed that
-   * the mapping is set up during the initialization phase (in
-   * SpatialData::parse()) and remains constant throughout the
-   * simulation, facilitating efficient spatial queries and analyses.
-   */
-  PROPERTY_REF(std::vector<int>, district_lookup)
+  
 
   // private:
   const std::string BETA_RASTER = "beta_raster";
@@ -116,15 +104,35 @@ public:
   // was written when we were using 5x5 km cells
   float cell_size = 0;
 
-  // First district index, default -1, lazy initialization to actual value
-  int first_district = -1;
-
   // Count of district loaded in the map, default zero, lazy initialization to
   // actual value
   int district_count = -1;
 
+  int min_district_id = -1;
+  int max_district_id = -1;
+
   // Add raster_info as a data member
   RasterInformation raster_info;
+
+  /**
+  * @brief This property holds a pre-populated map from location to district ID
+  * as defined in the GIS raster file.
+  *
+  * The vector contains district IDs where each element represents a specific
+  * location, and the value at each index corresponds to the actual district ID
+  * from the raster file. The district IDs can be either 0-based or 1-based,
+  * depending on how they are defined in the input GIS raster file. This mapping
+  * is essential for quickly determining the district of any given location
+  * within the simulation. It is assumed that the mapping is set up during the
+  * initialization phase (in SpatialData::parse()) and remains constant
+  * throughout the simulation, facilitating efficient spatial queries and
+  * analyses.
+  */
+  std::vector<int> location_to_district;
+
+  // Maps district IDs to their corresponding location IDs
+  // Index is 0 to max_district_id+1 to handle both 0-based and 1-based IDs
+  std::vector<std::vector<int>> district_to_locations;
 
   // Constructor
   SpatialData();
@@ -190,66 +198,41 @@ public:
   void generate_distances() const;
 
   /**
-   * @brief Retrieves the district ID as defined in raster files, corresponding
-   * to a given location ID.
+   * @brief Retrieves the district ID from the district raster file for a given location.
    *
-   * This function maps a location ID to its corresponding district ID, as
-   * defined within the raster files used by the simulation. This mapping is
-   * crucial for spatial analyses and operations that require understanding the
-   * geographical district a specific location belongs to.
+   * This is an internal method used during initialization to build the district lookup table.
+   * It performs coordinate-based lookups in the district raster file.
    *
    * @param location The location ID for which the district ID is requested.
-   * @return The district ID matching the location ID, as defined in the raster
-   * files.
+   * @return The district ID from the raster file for the given location.
+   * @throws std::out_of_range if location or coordinates are invalid
+   * @throws std::runtime_error if district data is not loaded or coordinates are null
    */
-  int get_raster_district(int location);
+  int get_district_from_raster(int location);
 
   /**
-   * @brief Retrieves the 0-based district ID in the simulation, corresponding
-   * to a given location ID.
+   * @brief Retrieves the district ID for a given location using the pre-computed lookup table.
    *
-   * This function translates a location ID into a simulation-internal, 0-based
-   * district ID. It is used primarily for internal simulation operations where
-   * districts are handled with 0-based indexing.
+   * This method provides fast district lookups using the pre-computed district_lookup_ table.
+   * The district IDs match those in the original raster file (either 0-based or 1-based).
    *
-   * @param location The location ID for which the 0-based district ID is
-   * requested.
-   * @return The 0-based district ID corresponding to the given location ID.
+   * @param location The location ID for which the district ID is requested.
+   * @return The district ID for the given location.
+   * @throws std::out_of_range if location is invalid
+   * @throws std::runtime_error if district data is not initialized
    */
   int get_district(int location);
 
   /**
-   * @brief Returns the adjusted district index matching the definition in
-   * raster files, for external storage.
-   *
-   * This function adjusts an internal simulation district index to match the
-   * district indexing as defined in the raster files. The adjusted index is
-   * suitable for external references, such as database entries, ensuring
-   * consistency between the simulation's internal data representation and
-   * external data stores.
-   *
-   * @param simulationDistrict The internal simulation district index that needs
-   * adjustment for external use.
-   * @return The adjusted district index that matches the raster file
-   * definitions, suitable for external references.
+   * @brief Returns a vector of location IDs that belong to the specified district.
+   * Uses a pre-computed mapping for efficient lookups.
+   * 
+   * @param district The district ID (matches IDs from the raster file, can be 0-based or 1-based)
+   * @return const reference to vector of location IDs in the district
+   * @throws std::runtime_error if districts are not loaded
+   * @throws std::out_of_range if district ID is invalid
    */
-  int adjust_simulation_district_to_raster_index(int simulationDistrict) {
-    // Assuming get_first_district() returns the necessary adjustment. Adjust as
-    // per your actual logic.
-    return simulationDistrict + get_first_district();
-  }
-
-  // Get the count of districts loaded, or -1 if they have not been loaded
-  int get_district_count();
-
-  // Get the locations that are within the given district, throws an error if
-  // not districts are loaded
-  std::vector<int> get_district_locations(int district);
-
-  // Returns the index of the first district.
-  // Note that the index may be one (ArcGIS default) or zero; however, a
-  // delayed error is generated if the value is not one of the two.
-  int get_first_district();
+  const std::vector<int>& get_district_locations(int district) const;
 
   // Get a reference to the AscFile raster, may be a nullptr
   AscFile* get_raster(SpatialFileType type) { return data[type].get(); }
@@ -294,8 +277,9 @@ public:
   void reset() {
     // Reset each unique_ptr individually
     for (auto &ptr : data) { ptr.reset(); }
-    first_district = 0;
-    district_count = 0;
+    district_count = -1;
+    min_district_id = -1;
+    max_district_id = -1;
   }
 
   // Add method to validate raster information

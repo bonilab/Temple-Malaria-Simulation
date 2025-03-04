@@ -46,7 +46,7 @@ void AgeBandReporter::initialize(int job_number, const std::string &path) {
   // Build a lookup for location to district
   for (auto loc = 0; loc < Model::CONFIG->number_of_locations(); loc++) {
     district_lookup.emplace_back(
-        SpatialData::get_instance().get_raster_district(loc));
+        SpatialData::get_instance().get_district(loc));
   }
 
   // Log the header for the PfPR and cases file, this is a bit redundant because
@@ -73,8 +73,7 @@ void AgeBandReporter::monthly_report() {
 
   // Prepare some values
   auto age_classes = Model::CONFIG->number_of_age_classes();
-  auto districts = SpatialData::get_instance().get_district_count();
-  auto first_index = SpatialData::get_instance().get_first_district();
+  auto districts = SpatialData::get_instance().district_count;
   std::vector<std::vector<int>> population(districts,
                                            std::vector<int>(age_classes));
   std::vector<std::vector<double>> prevalence(districts,
@@ -84,7 +83,7 @@ void AgeBandReporter::monthly_report() {
   for (auto loc = 0; loc < Model::CONFIG->number_of_locations(); loc++) {
     for (auto ac = 0; ac < Model::CONFIG->number_of_age_classes(); ac++) {
       // Note the district we are in, make sure things are zero indexed
-      auto district = district_lookup[loc] - first_index;
+      auto district = district_lookup[loc];
 
       // Update the population and case data
       population[district][ac] +=
@@ -97,8 +96,8 @@ void AgeBandReporter::monthly_report() {
 
   // We now have the data, write the pfpr out to disk
   for (auto district = 0; district < districts; district++) {
-    pfpr << current_time << Csv::sep << (district + first_index) << Csv::sep;
-    cases << current_time << Csv::sep << (district + first_index) << Csv::sep;
+    pfpr << current_time << Csv::sep << district << Csv::sep;
+    cases << current_time << Csv::sep << district << Csv::sep;
     for (auto ac = 0; ac < age_classes; ac++) {
       pfpr << ((prevalence[district][ac] != 0)
                    ? (prevalence[district][ac] / population[district][ac])

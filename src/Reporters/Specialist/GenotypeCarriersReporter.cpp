@@ -103,7 +103,7 @@ void GenotypeCarriersReporter::monthly_report() {
 
   // Determine the offset to use for the updates
   auto offset = (aggregation == "D")
-                    ? SpatialData::get_instance().get_first_district()
+                    ? SpatialData::get_instance().min_district_id
                     : 0;
 
   // Now prepare the query with the count updates

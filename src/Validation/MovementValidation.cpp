@@ -36,8 +36,8 @@ void MovementValidation::add_move(int individual, int source, int destination) {
 
   // Determine the districts
   auto &sd = SpatialData::get_instance();
-  int source_district = sd.get_raster_district(source);
-  int destination_district = sd.get_raster_district(destination);
+  int source_district = sd.get_district(source);
+  int destination_district = sd.get_district(destination);
 
   // Record the move
   instance.reporter->add_coarse_move(individual, source_district,

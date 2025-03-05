@@ -68,20 +68,24 @@ public:
     // The size of the cell, typically in meters
     double cellsize = NOT_SET;
 
+    double no_data_value = NOT_SET;
+
     // Validate if the raster information matches another instance
     bool matches(const RasterInformation &other) const {
       return number_columns == other.number_columns
              && number_rows == other.number_rows
              && x_lower_left_corner == other.x_lower_left_corner
              && y_lower_left_corner == other.y_lower_left_corner
-             && cellsize == other.cellsize;
+             && cellsize == other.cellsize
+             && no_data_value == other.no_data_value;
     }
 
     // Check if the raster information has been initialized
     bool is_initialized() const {
       return number_columns != NOT_SET && number_rows != NOT_SET
              && x_lower_left_corner != NOT_SET && y_lower_left_corner != NOT_SET
-             && cellsize != NOT_SET;
+             && cellsize != NOT_SET
+             && no_data_value != NOT_SET;
     }
   };
 
@@ -124,7 +128,7 @@ public:
 
   /**
    * @brief Parses spatial configuration from YAML and initializes the spatial
-   * system
+   * system, all reaster files must be defined in raster_db node for the check_catalog to work
    *
    * @param node YAML configuration node containing spatial settings
    * @return true if parsing was successful
@@ -137,7 +141,8 @@ public:
   bool check_catalog(std::string &errors);
 
   /**
-   * @brief Generates location database from the first available raster file
+   * @brief Generates location database from a reference raster file
+   * @param raster The raster file to use as a reference for location generation
    *
    * This function creates location entries for each valid (non-NODATA) cell in
    * the raster. Each location is assigned:
@@ -148,7 +153,7 @@ public:
    * @throws std::runtime_error if no valid raster files are available
    * @throws std::runtime_error if no valid locations are found in the raster
    */
-  void generate_locations();
+  void generate_locations(AscFile* raster);
 
   // Load the given raster file into the spatial catalog and assign the given
   // label
@@ -243,10 +248,6 @@ public:
    * simulations.
    */
   void populate_dependent_data();
-
-  // Write the current spatial data to the filename and path indicated, output
-  // will be an ASC file
-  void write(const std::string &filename, SpatialFileType type);
 
   // Reset the singleton instance for testing
   void reset() {

@@ -12,6 +12,7 @@
 #include "Core/Config/CustomConfigItem.h"
 #include "Helpers/TimeHelpers.h"
 #include "Model.h"
+#include "GIS/AscFile.h"
 
 SeasonalEquation* SeasonalEquation::build(const YAML::Node &node,
                                           Config* config) {
@@ -78,13 +79,12 @@ double SeasonalEquation::get_seasonal_factor(const date::sys_days &today,
 
 // Set the values based upon the contents of a raster file.
 void SeasonalEquation::set_from_raster(const YAML::Node &node) {
-  // Get the raster data and make sure it is valid
-  AscFile* raster = SpatialData::get_instance().get_raster(
-      SpatialData::SpatialFileType::Ecoclimatic);
-  if (raster == nullptr) {
-    throw std::invalid_argument(
-        "Seasonal equation  raster flag set without eco-climatic raster "
-        "loaded.");
+
+  //ecoclimatic_raster: "bfa_ecozone.asc"
+  auto raster = SpatialData::get_instance().get_raster(SpatialData::SpatialFileType::Ecoclimatic);
+
+  if (!raster) {
+    throw std::invalid_argument("Ecoclimatic raster not found.");
   }
 
   // Prepare to run
@@ -97,20 +97,20 @@ void SeasonalEquation::set_from_raster(const YAML::Node &node) {
       // Pass if we have no data here
       if (raster->data[row][col] == raster->NODATA_VALUE) { continue; }
 
-      // Verify the index
-      int index = static_cast<int>(raster->data[row][col]);
-      if (index < 0) {
+      // Verify the zone_index
+      int zone_index = static_cast<int>(raster->data[row][col]);
+      if (zone_index < 0) {
         throw std::out_of_range(fmt::format(
             "Raster value at row: {}, col: {} is less than zero.", row, col));
       }
-      if (index > (size - 1)) {
+      if (zone_index > (size - 1)) {
         throw std::out_of_range(fmt::format(
             "Raster value at row: {}, col: {} exceeds bounds of {}.", row, col,
             size));
       }
 
       // Set the seasonal period
-      set_seasonal_period(node, index);
+      set_seasonal_period(node, zone_index);
     }
   }
 }

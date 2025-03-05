@@ -48,8 +48,7 @@ void number_of_locations::set_value(const YAML::Node &node) { set_value(); }
 
 void spatial_distance_matrix::set_value(const YAML::Node &node) {
   if (SpatialData::get_instance().using_raster) {
-    VLOG(1) << "Raster data detected, using it to generate distances";
-    SpatialData::get_instance().generate_distances();
+    VLOG(1) << "Raster data detected, SpatialData will generate distances";
     return;
   }
 

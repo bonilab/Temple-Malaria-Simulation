@@ -10,6 +10,7 @@
 #define SPATIAL_WESOLOWSKISURFACESM_H
 
 #include <cmath>
+#include <vector>
 
 #include "Core/PropertyMacro.h"
 #include "Helpers/NumberHelpers.hxx"
@@ -27,7 +28,7 @@ class WesolowskiSurfaceSM : public SpatialModel {
 
 private:
   // Travel surface, computed when the prepare method is called
-  double* travel = nullptr;
+  std::vector<double> travel;
 
 public:
   explicit WesolowskiSurfaceSM(const YAML::Node &node) {
@@ -39,12 +40,21 @@ public:
 
   ~WesolowskiSurfaceSM() override = default;
 
-  void prepare() override { travel = prepare_surface(SpatialData::Travel); }
+  void prepare() override { 
+    AscFile* travel_raster = SpatialData::get_instance().get_raster(SpatialData::SpatialFileType::Travel);
+    travel = std::move(prepare_surface(travel_raster));
+  }
 
   [[nodiscard]] DoubleVector get_v_relative_out_movement_to_destination(
       const int &from_location, const int &number_of_locations,
       const DoubleVector &relative_distance_vector,
       const IntVector &v_number_of_residents_by_location) const override {
+    // Check if travel surface is prepared
+    if (travel.empty()) {
+      throw std::runtime_error(fmt::format(
+          "{} called without travel surface prepared", __FUNCTION__));
+    }
+
     std::vector<double> results(number_of_locations, 0);
     for (int destination = 0; destination < number_of_locations;
          destination++) {

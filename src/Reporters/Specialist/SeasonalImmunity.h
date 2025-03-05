@@ -4,6 +4,7 @@
  * This reporter is intended for use at a high level, aggregated by seasonality
  * zone and aggregates the relevant parameters needed to study the interactions
  * between seasonal changes in transmission and immune response.
+ * only used with SeasonalEquation that uses a raster to define the zones
  */
 
 #ifndef SEASONALIMMUNITY_H

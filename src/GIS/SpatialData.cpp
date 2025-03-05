@@ -19,6 +19,44 @@ SpatialData::SpatialData() = default;  // Array is zero-initialized by default
 
 SpatialData::~SpatialData() = default;  // Let unique_ptr handle cleanup
 
+bool SpatialData::parse(const YAML::Node &node) {
+  // Validate required configuration
+  if (!node["cell_size"]) {
+    throw std::runtime_error("Missing required 'cell_size' configuration");
+  }
+  cell_size = node["cell_size"].as<float>();
+
+  // Load and validate raster files
+  load_files(node);
+
+  if (Model::CONFIG->number_of_locations() != 0) {
+    throw std::runtime_error("Location database is not empty");
+  }
+
+   // find first raster that is not nullptr
+  auto first_raster = std::find_if(data.begin(), data.end(), [](const auto& raster) { return raster != nullptr; });
+  if (first_raster == data.end()) {
+    throw std::runtime_error("No raster files found");
+  }
+
+  LOG(INFO) << "Location database is empty, generating locations using first "
+                "available raster.";
+  generate_locations(first_raster->get());
+  generate_distances();
+
+  // Load the age distribution data from the YAML file (not provided by raster)
+  load_age_distribution(node);
+
+  // Load location-specific data from raster or YAML
+  load_location_data(node);
+  load_treatment_data(node);
+
+  // Finalize setup, populate location_to_district, district_to_locations, and reset rasters
+  populate_dependent_data();
+  parse_complete();
+  return true;
+}
+
 bool SpatialData::validate_raster_info(const RasterInformation &new_info,
                                        std::string &errors) {
   // If raster_info isn't initialized yet, store the new info
@@ -67,11 +105,34 @@ bool SpatialData::check_catalog(std::string &errors) {
     ref_raster_info.x_lower_left_corner = raster->XLLCORNER;
     ref_raster_info.y_lower_left_corner = raster->YLLCORNER;
     ref_raster_info.cellsize = raster->CELLSIZE;
+    ref_raster_info.no_data_value = raster->NODATA_VALUE;
 
     if (!validate_raster_info(ref_raster_info, errors)) {
       errors = fmt::format("Header mismatch: {}", errors);
       LOG(ERROR) << errors;
       return true;
+    }
+  }
+
+  //check for all rasters have the same no_data cell locations
+  AscFile* ref_raster = nullptr;
+  for (const auto &raster : data) {
+    if (!raster) { continue; }
+    if (ref_raster == nullptr) {
+      ref_raster = raster.get();
+      continue;
+    }
+
+    for (int row = 0; row < raster->NROWS; row++) {
+      for (int col = 0; col < raster->NCOLS; col++) {
+        if (raster->data[row][col] == raster->NODATA_VALUE) {
+          if (ref_raster->data[row][col] != raster->NODATA_VALUE) { 
+            errors = fmt::format("NODATA_VALUE mismatch: {}", raster->NODATA_VALUE);
+            LOG(ERROR) << errors;
+            return true;
+          }
+        }
+      }
     }
   }
 
@@ -82,11 +143,15 @@ void SpatialData::generate_distances() const {
   auto &db = Model::CONFIG->location_db();
   auto &distances = Model::CONFIG->spatial_distance_matrix();
 
-  auto locations = db.size();
-  distances.resize(static_cast<unsigned long>(locations));
-  for (std::size_t from = 0; from < locations; from++) {
-    distances[from].resize(static_cast<unsigned long long int>(locations));
-    for (std::size_t to = 0; to < locations; to++) {
+  auto number_of_locations = db.size();
+  if (number_of_locations == 0) {
+    throw std::runtime_error("No locations found in location database");
+  }
+  
+  distances.resize(static_cast<unsigned long>(number_of_locations));
+  for (std::size_t from = 0; from < number_of_locations; from++) {
+    distances[from].resize(static_cast<unsigned long long int>(number_of_locations));
+    for (std::size_t to = 0; to < number_of_locations; to++) {
       distances[from][to] =
           std::sqrt(std::pow(cell_size
                                  * (db[from].coordinate->latitude
@@ -96,24 +161,15 @@ void SpatialData::generate_distances() const {
                                    * (db[from].coordinate->longitude
                                       - db[to].coordinate->longitude),
                                2));
+
+      // std::cout << "Distance between location " << from << " and location " << to << " is " << distances[from][to] << std::endl;
     }
   }
 
-  VLOG(1) << "Updated Euclidean distances using raster data";
+  LOG(INFO) << "Updated Euclidean distances using raster data";
 }
 
-void SpatialData::generate_locations() {
-  // Find first available raster file to use as reference
-  AscFile* reference = nullptr;
-  SpatialFileType reference_type = SpatialFileType::Count;
-
-  for (int type = 0; type < SpatialFileType::Count; ++type) {
-    if (data[type]) {
-      reference = data[type].get();
-      reference_type = static_cast<SpatialFileType>(type);
-      break;
-    }
-  }
+void SpatialData::generate_locations(AscFile* reference) {
 
   // Validate we found a reference raster
   if (!reference) {
@@ -121,25 +177,28 @@ void SpatialData::generate_locations() {
         "No spatial raster files available to generate locations");
   }
 
-  // VLOG(2) << fmt::format("Using {} raster as reference for location
-  // generation",
-  //                       reference_type);
+  // Using Raster Information to generate locations
+  if (raster_info.is_initialized()) {
+    VLOG(1) << "Using Raster Information to generate locations";
+  } else {
+    throw std::runtime_error("Raster Information is not initialized");
+  }
 
   // Pre-allocate the location database
   auto &db = Model::CONFIG->location_db();
   db.clear();
 
   // Calculate maximum possible size (all cells valid)
-  const size_t max_size = static_cast<size_t>(reference->NROWS)
-                          * static_cast<size_t>(reference->NCOLS);
+  const size_t max_size = static_cast<size_t>(raster_info.number_rows)
+                          * static_cast<size_t>(raster_info.number_columns);
   db.reserve(max_size);
 
   // Generate locations for valid cells
   int location_id = 0;
-  const float no_data = reference->NODATA_VALUE;
+  const float no_data = raster_info.no_data_value;
 
-  for (int row = 0; row < reference->NROWS; ++row) {
-    for (int col = 0; col < reference->NCOLS; ++col) {
+  for (int row = 0; row < raster_info.number_rows; ++row) {
+    for (int col = 0; col < raster_info.number_columns; ++col) {
       if (reference->data[row][col] == no_data) { continue; }
       db.emplace_back(location_id++, row, col, 0);
     }
@@ -154,12 +213,11 @@ void SpatialData::generate_locations() {
 
   if (location_count == 0) {
     throw std::runtime_error(
-        fmt::format("No valid locations found in reference raster (type: {})",
-                    static_cast<int>(reference_type)));
+        fmt::format("No valid locations found in raster"));
   }
-
-  VLOG(1) << fmt::format("Generated {} locations from ({:.1f}% of cells)",
-                         location_count, 100.0 * location_count / max_size);
+  auto no_data_count = max_size - location_count;
+  LOG(INFO) << fmt::format("Generated {} locations from {} total cells, {} cells with no data",
+                         location_count, max_size, no_data_count);
 }
 
 int SpatialData::get_district_from_raster(int location) {
@@ -313,36 +371,6 @@ void SpatialData::load_files(const YAML::Node &node) {
   }
 }
 
-bool SpatialData::parse(const YAML::Node &node) {
-  // Validate required configuration
-  if (!node["cell_size"]) {
-    throw std::runtime_error("Missing required 'cell_size' configuration");
-  }
-  cell_size = node["cell_size"].as<float>();
-
-  // Load and validate raster files
-  load_files(node);
-
-  // We have data, and we know that it should be located in the same geographic
-  // space, so now we can now refresh the location_db
-  if (Model::CONFIG->number_of_locations() == 0) {
-    LOG(INFO) << "Location database is empty, generating locations using first "
-                 "available raster.";
-    generate_locations();
-  }
-
-  // Load the age distribution data from the YAML file (not provided by raster)
-  load_age_distribution(node);
-
-  // Load location-specific data from raster or YAML
-  load_location_data(node);
-  load_treatment_data(node);
-
-  // Finalize setup, populate location_to_district, district_to_locations, and reset rasters
-  populate_dependent_data();
-  parse_complete();
-  return true;
-}
 
 void SpatialData::load_age_distribution(const YAML::Node &node) {
   if (!node["age_distribution_by_location"]) {
@@ -536,22 +564,16 @@ int SpatialData::get_district(int location) {
 
 void SpatialData::parse_complete() {
   // Simply reset unique_ptrs instead of manual delete
+  // some rasters are not reset because they are used by other components for initialization
+  // i.e: SeasonalImmunity reporter requires the Ecoclimatic raster
+  // SeasonalEquation reporter requires the Ecoclimatic raster
+  // SpatialModel requires the Travel raster
+  // ...
+  
   data[SpatialFileType::Beta].reset();
   data[SpatialFileType::Population].reset();
   data[SpatialFileType::PrTreatmentUnder5].reset();
   data[SpatialFileType::PrTreatmentOver5].reset();
-}
-
-void SpatialData::write(const std::string &filename, SpatialFileType type) {
-  // Check to make sure there is something to write
-  if (!data[type]) {  // Check if unique_ptr contains object
-    throw std::runtime_error(
-        fmt::format("No data for spatial file type {}, write file {}",
-                    static_cast<uint32_t>(type), filename));
-  }
-
-  // Write the data
-  AscFileManager::write(data[type].get(), filename);
 }
 
 const std::vector<int>& SpatialData::get_district_locations(int district) const {

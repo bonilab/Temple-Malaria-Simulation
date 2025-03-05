@@ -28,25 +28,25 @@ class BurkinaFaso : public SpatialModel {
   VIRTUAL_PROPERTY_REF(double, penalty)
 
 private:
-  // Hold on to the total number of locations, so we can free the kernel
+  // Hold on to the total number of locations, so we can use it for vectors
   unsigned long locations = 0;
 
   // These variables will be computed when the prepare method is called
-  double* travel = nullptr;
-  double** kernel = nullptr;
+  std::vector<double> travel;
+  std::vector<std::vector<double>> kernel;
 
   // Precompute the kernel function for the movement model
   void prepare_kernel() {
     // Prepare the kernel object
-    kernel = new double*[locations];
+    kernel.resize(locations);
 
     // Get the distance matrix
     auto distance = Model::CONFIG->spatial_distance_matrix();
 
     // Iterate through all the locations and calculate the kernel
-    for (auto source = 0; source < locations; source++) {
-      kernel[source] = new double[locations];
-      for (auto destination = 0; destination < locations; destination++) {
+    for (auto source = 0ul; source < locations; source++) {
+      kernel[source].resize(locations);
+      for (auto destination = 0ul; destination < locations; destination++) {
         kernel[source][destination] =
             std::pow(1 + (distance[source][destination] / rho_), (-alpha_));
       }
@@ -62,16 +62,8 @@ public:
     penalty_ = node["penalty"].as<double>();
   }
 
-  ~BurkinaFaso() override {
-    // Delete memory allocated to the kernel
-    if (kernel != nullptr) {
-      for (auto ndx = 0; ndx < locations; ndx++) { delete kernel[ndx]; }
-      delete kernel;
-    }
-
-    // Delete everything else
-    delete travel;
-  }
+  // Destructor can be removed or simplified since vectors handle cleanup automatically
+  ~BurkinaFaso() override = default;
 
   void prepare() override {
     // Note the number of locations
@@ -79,7 +71,8 @@ public:
 
     // Allow the work to be done
     prepare_kernel();
-    travel = prepare_surface(SpatialData::SpatialFileType::Travel);
+    AscFile* travel_raster = SpatialData::get_instance().get_raster(SpatialData::SpatialFileType::Travel);
+    travel = std::move(prepare_surface(travel_raster));
   }
 
   [[nodiscard]] DoubleVector get_v_relative_out_movement_to_destination(
@@ -88,7 +81,7 @@ public:
       const IntVector &v_number_of_residents_by_location) const override {
     // Dependent objects should have been created already, so throw an exception
     // if they are not
-    if (kernel == nullptr || travel == nullptr) {
+    if (kernel.empty() || travel.empty()) {
       throw std::runtime_error(fmt::format(
           "{} called without kernel or travel surface prepared", __FUNCTION__));
     }

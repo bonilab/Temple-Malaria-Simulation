@@ -10,14 +10,6 @@
 #include <iomanip>
 #include <iostream>
 
-AscFile::~AscFile() {
-  if (data == nullptr) { return; }
-
-  // Free the allocated memory
-  for (auto ndx = 0; ndx < NROWS; ndx++) { delete[] data[ndx]; }
-  delete[] data;
-}
-
 // Check that the contents fo the ASC file are correct. Returns TRUE if any
 // errors are found, which are enumerated in the string provided.
 bool AscFileManager::checkAscFile(AscFile* file, std::string* errors) {
@@ -97,17 +89,15 @@ AscFile* AscFileManager::read(const std::string &fileName) {
   if (checkAscFile(results, errors)) { throw std::runtime_error(*errors); }
   delete errors;
 
-  // Allocate the memory and read the remainder of the actual raster data
-  results->data = new float*[results->NROWS];
-  for (auto ndx = 0; ndx < results->NROWS; ndx++) {
-    results->data[ndx] = new float[results->NCOLS];
+  // Allocate the memory using vectors
+  results->data.resize(results->NROWS);
+  for (auto& row : results->data) {
+    row.resize(results->NCOLS);
   }
 
   // Remainder of the file is the actual raster data
   for (auto ndx = 0; ndx < results->NROWS; ndx++) {
     for (auto ndy = 0; ndy < results->NCOLS; ndy++) {
-      // If the file is malformed then we may encounter the EOF before reading
-      // all the data
       if (in.eof()) {
         throw std::runtime_error("EOF encountered while reading data from: "
                                  + fileName);

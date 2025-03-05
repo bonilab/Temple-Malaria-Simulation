@@ -10,6 +10,7 @@
 #define ASCFILE_H
 
 #include <string>
+#include <vector>
 
 // The ASC file either as read, or to be written. Note that since the
 // specification does not provide a header indicating if the data is floating
@@ -46,11 +47,8 @@ struct AscFile {
   // initialization
   double NODATA_VALUE = 0;
 
-  // The data stored in the file
-  float** data = nullptr;
-
-  // Deconstructor
-  ~AscFile();
+  // The data stored in the file using vector of vectors
+  std::vector<std::vector<float>> data;
 };
 
 class AscFileManager {

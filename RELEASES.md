@@ -23,6 +23,9 @@ Version 4.1.10 improves memory management and code quality:
    - Simplified raster detection with explicit `using_raster` flag
    - Removed redundant `has_raster()` checks in favor of direct flag access
    - Moved district-related data members to private section for better encapsulation
+   - Added validation for NODATA cell consistency across rasters
+   - Improved raster information validation and error reporting
+   - Enhanced location generation with better error handling and logging
 
 2. Major improvements to district handling:
    - Direct district ID indexing without adjustments
@@ -35,28 +38,35 @@ Version 4.1.10 improves memory management and code quality:
    - Improved district presence checks using district_count
 
 3. Code quality improvements:
-   - Removed manual memory management
-   - Eliminated potential memory leaks
-   - Improved type safety
-   - Better const correctness
-   - More consistent error handling
+   - Replaced raw pointers with std::vector throughout the codebase
+   - Removed manual memory management in AscFile and movement models
+   - Improved move semantics for better performance
+   - Enhanced error handling with more specific error messages
+   - Better const correctness and type safety
    - Simplified district lookup logic
    - Reduced code duplication
    - Clearer separation between raster and non-raster data paths
    - Better error messages for configuration conflicts
    - Removed PostgreSQL database dependencies and related code
    - Simplified build dependencies by removing libpq, libpqxx, and OpenSSL
+   - Improved test organization and reduced redundancy
 
 4. Performance considerations:
-   - Optimized pointer access patterns
+   - Optimized data structures using std::vector
    - Reduced overhead from manual memory management
+   - Improved move semantics for large data transfers
    - Cache-friendly data structures
-   - Zero-cost abstractions for pointer management
+   - Zero-cost abstractions for memory management
    - O(1) district and location lookups
    - Pre-computed mappings to avoid repeated calculations
    - Simplified raster state tracking
 
-5. Add UnitTest for SpatialData and SeasonalPattern
+5. Add UnitTest for SpatialData and SeasonalPattern:
+   - Better organized test cases
+   - Separated file loading and data access tests
+   - Improved test setup and teardown
+   - More comprehensive error handling tests
+   - Better test isolation and state management
 
 These changes improve the robustness and maintainability of the spatial data handling system while maintaining the existing functionality and performance characteristics.
 

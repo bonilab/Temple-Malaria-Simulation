@@ -10,6 +10,8 @@
 #include "Helpers/RunningMedian.hxx"
 #include "MDC/MainDataCollector.h"
 #include "Model.h"
+#include "Environment/SeasonalEquation.h"
+#include "Core/Config/Config.h"
 #include "Population/ImmuneSystem.h"
 #include "Population/Person.h"
 #include "Population/Population.h"
@@ -158,36 +160,35 @@ void SeasonalImmunity::monthly_report() {
 }
 
 void SeasonalImmunity::build_lookup() {
-  // Get the raster data and make sure it is valid
-  AscFile* raster = SpatialData::get_instance().get_raster(
-      SpatialData::SpatialFileType::Ecoclimatic);
-  if (raster == nullptr) {
-    LOG(ERROR) << "The Seasonal Immunity reporter cannot be run without an "
-                  "associated climate raster.";
-    throw std::runtime_error(
-        "SeasonalImmunity reporter without underlying raster is not "
-        "supported.");
+
+  auto seasonal_raster = SpatialData::get_instance().get_raster(SpatialData::SpatialFileType::Ecoclimatic);
+  if (seasonal_raster == nullptr) {
+    throw std::runtime_error("SeasonalImmunity reporter requires a Ecoclimatic raster.");
   }
 
-  // Load the value into the lookup based on the raster
-  for (int row = 0; row < raster->NROWS; row++) {
-    for (int col = 0; col < raster->NCOLS; col++) {
-      // Pass if we have no data
-      if (raster->data[row][col] == raster->NODATA_VALUE) { continue; }
-
-      // Verify the zone
-      auto zone = static_cast<int>(raster->data[row][col]);
-      if (zone < 0) {
-        throw std::out_of_range(fmt::format(
-            "Raster value at row: {}, col: {} is less than zero.", row, col));
+  lookup.clear();
+  auto min_value = std::numeric_limits<int>::max();
+  auto max_value = std::numeric_limits<int>::min();
+  for (int i = 0; i < seasonal_raster->NROWS; i++) {
+    for (int j = 0; j < seasonal_raster->NCOLS; j++) {
+      if (seasonal_raster->data[i][j] == seasonal_raster->NODATA_VALUE) {
+        continue;
       }
-
-      // Set the value
-      lookup.emplace_back(zone);
-      lookup_allocation = (lookup_allocation < zone) ? zone : lookup_allocation;
+      auto zone = seasonal_raster->data[i][j];
+      lookup.push_back(zone);
+      if (zone < min_value) {
+        min_value = zone;
+      }
+      if (zone > max_value) {
+        max_value = zone;
+      }
     }
   }
 
-  // Update the lookup allocation by one to account for indexing
-  lookup_allocation++;
+  // min should be 0 or 1
+  if (min_value != 0 && min_value != 1) {
+    throw std::runtime_error("SeasonalImmunity reporter only supports zone id 0 or 1.");
+  }
+
+  lookup_allocation = max_value + 1;
 }

@@ -47,18 +47,11 @@ public:
     MONTHLY_REPORTER,
     MMC_REPORTER,
 
-    // Reporter(s) with database dependency
-    DB_REPORTER,
-    DB_REPORTER_DISTRICT,
-
     // Specialist reporters for specific experiments
-    MOVEMENT_REPORTER,
     POPULATION_REPORTER,
     CELLULAR_REPORTER,
-    GENOTYPE_CARRIERS,
     SEASONAL_IMMUNITY,
     AGE_BAND_REPORTER,
-    THERAPY_RECORD_REPORTER,
 
     // SQLite reporter
     SQLITE_DISTRICT_REPORTER,

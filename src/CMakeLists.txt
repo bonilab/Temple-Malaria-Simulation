@@ -10,9 +10,6 @@ find_package(fmt CONFIG REQUIRED)
 find_package(CLI11 CONFIG REQUIRED)
 find_package(date CONFIG REQUIRED)
 find_package(args CONFIG REQUIRED)
-find_package(OpenSSL REQUIRED)
-#find_package(PostgreSQL REQUIRED) # Not needed (it will duplicate the libs)
-find_package(libpqxx CONFIG REQUIRED)
 find_package(unofficial-sqlite3 CONFIG REQUIRED)
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
@@ -70,11 +67,6 @@ target_link_libraries(MaSimCore PUBLIC
         date::date-tz
         taywee::args
         ${EASYLOGGINGPP_LIB}
-        PRIVATE libpqxx::pqxx
-        # libpqxx already includes PostgreSQL
-        # PRIVATE PostgreSQL::PostgreSQL
-        PRIVATE OpenSSL::SSL
-        PRIVATE OpenSSL::Crypto
 )
 
 # Enable warnings when building debug

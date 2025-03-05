@@ -22,6 +22,7 @@ Version 4.1.10 improves memory management and code quality:
    - Cleaner initialization and cleanup
    - Simplified raster detection with explicit `using_raster` flag
    - Removed redundant `has_raster()` checks in favor of direct flag access
+   - Moved district-related data members to private section for better encapsulation
 
 2. Major improvements to district handling:
    - Direct district ID indexing without adjustments
@@ -31,7 +32,7 @@ Version 4.1.10 improves memory management and code quality:
      * district_to_locations for efficient location retrieval
    - Eliminated redundant district index translations
    - Better handling of district boundaries and validation
-   - Improved district presence checks using location_to_district size
+   - Improved district presence checks using district_count
 
 3. Code quality improvements:
    - Removed manual memory management
@@ -43,6 +44,8 @@ Version 4.1.10 improves memory management and code quality:
    - Reduced code duplication
    - Clearer separation between raster and non-raster data paths
    - Better error messages for configuration conflicts
+   - Removed PostgreSQL database dependencies and related code
+   - Simplified build dependencies by removing libpq, libpqxx, and OpenSSL
 
 4. Performance considerations:
    - Optimized pointer access patterns

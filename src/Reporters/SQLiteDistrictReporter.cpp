@@ -16,7 +16,7 @@ void SQLiteDistrictReporter::initialize(int jobNumber,
                                         const std::string &path) {
   // Inform the user of the reporter type and make sure there are districts
   VLOG(1) << "Using SQLiteDbReporterwith aggregation at the district level.";
-  if (SpatialData::get_instance().location_to_district.size() == 0) {
+  if (SpatialData::get_instance().district_count <= 0) {
     LOG(ERROR) << "District raster must be present when aggregating data at "
                   "the district level.";
     throw std::invalid_argument("No district raster present");
@@ -26,7 +26,7 @@ void SQLiteDistrictReporter::initialize(int jobNumber,
 }
 
 void SQLiteDistrictReporter::count_infections_for_location(int location) {
-  auto district = SpatialData::get_instance().location_to_district[location];
+  auto district = SpatialData::get_instance().get_district(location);
   auto &ageClasses = Model::CONFIG->age_structure();
   auto* index =
       Model::POPULATION->get_person_index<PersonIndexByLocationStateAgeClass>();
@@ -47,7 +47,7 @@ void SQLiteDistrictReporter::count_infections_for_location(int location) {
 }
 
 void SQLiteDistrictReporter::collect_site_data_for_location(int location) {
-  auto district = SpatialData::get_instance().location_to_district[location];
+  auto district = SpatialData::get_instance().get_district(location);
   auto &ageClasses = Model::CONFIG->age_structure();
 
   count_infections_for_location(location);
@@ -199,7 +199,7 @@ void SQLiteDistrictReporter::monthly_report_site_data(int monthId) {
 }
 
 void SQLiteDistrictReporter::collect_genome_data_for_location(size_t location) {
-  auto district = SpatialData::get_instance().location_to_district[location];
+  auto district = SpatialData::get_instance().get_district(location);
   auto* index =
       Model::POPULATION->get_person_index<PersonIndexByLocationStateAgeClass>();
   auto ageClasses = index->vPerson()[0][0].size();

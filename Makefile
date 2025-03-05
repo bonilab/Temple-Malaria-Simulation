@@ -35,7 +35,7 @@ setup_vcpkg:
 	fi
 
 install_deps: setup-vcpkg
-	[ -z "$(VCPKG_BASE)" ] || $(VCPKG_EXEC) install gsl yaml-cpp fmt libpq libpqxx sqlite3 date args cli11 gtest catch easyloggingpp
+	[ -z "$(VCPKG_BASE)" ] || $(VCPKG_EXEC) install gsl yaml-cpp fmt sqlite3 date args cli11 gtest catch easyloggingpp
 
 generate g:
 	cmake -Bbuild -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) -DENABLE_TRAVEL_TRACKING=$(ENABLE_TRAVEL_TRACKING) -DBUILD_TESTS=$(BUILD_TESTS) $(TOOLCHAIN_ARG) .

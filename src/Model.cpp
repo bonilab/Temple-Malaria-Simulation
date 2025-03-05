@@ -38,7 +38,6 @@
 #include "Strategies/IStrategy.h"
 #include "Therapies/Drug.h"
 #include "Treatment/SteadyTCM.hxx"
-#include "Validation/MovementValidation.h"
 #include "easylogging++.h"
 
 Model* Model::MODEL = nullptr;
@@ -146,7 +145,7 @@ void Model::initialize(int job_number, const std::string &path) {
   VLOG(1) << "Initialing reporter(s)...";
   try {
     if (reporter_type_.empty()) {
-      add_reporter(Reporter::MakeReport(Reporter::DB_REPORTER));
+      add_reporter(Reporter::MakeReport(Reporter::MONTHLY_REPORTER));
     } else {
       for (const auto &type : StringHelpers::split(reporter_type_, ',')) {
         if (Reporter::ReportTypeMap.find(type)
@@ -206,42 +205,6 @@ void Model::initialize(int job_number, const std::string &path) {
   for (auto* event : config_->PreconfigEvents()) {
     scheduler_->schedule_population_event(event);
   }
-
-  if (report_movement()) {
-    // Generate a movement reporter
-    Reporter* reporter =
-        Reporter::MakeReport(Reporter::ReportType::MOVEMENT_REPORTER);
-    add_reporter(reporter);
-    reporter->initialize(job_number, path);
-
-    // Get the validator and prepare it for the run
-    auto &validator = MovementValidation::get_instance();
-    validator.set_reporter((MovementReporter*)reporter);
-
-    // Set the flags on the validator
-    if (individual_movement_) {
-      LOG(INFO) << "Tracking of individual movement enabled.";
-      validator.set_individual_movement(individual_movement_);
-    }
-    if (cell_movement_) {
-      LOG(INFO) << "Tracking of cell movement enabled.";
-      validator.set_cell_movement(cell_movement_);
-    }
-    if (district_movement_) {
-      LOG(INFO) << "Tracking of district movement enabled.";
-      validator.set_district_movement(district_movement_);
-    }
-  }
-
-  if (district_movement_) {
-    if (SpatialData::get_instance().location_to_district.size() == 0) {
-      LOG(ERROR)
-          << "Districts raster must be loaded to track district movements.";
-      throw std::runtime_error("--mcd set without districts raster loaded.");
-    }
-  }
-
-  if (dump_movement_) { MovementValidation::write_movement_data(); }
 }
 
 void Model::initialize_object_pool(const int &size) {

@@ -20,7 +20,6 @@ class Config;
 class Random;
 class MainDataCollector;
 class Reporter;
-class MovementReporter;
 
 class Model {
   DELETE_COPY_AND_MOVE(Model)
@@ -44,10 +43,6 @@ class Model {
   PROPERTY_REF(std::string, override_parameter_filename)
   PROPERTY_REF(int, override_parameter_line_number)  // base 1
   PROPERTY_REF(int, gui_type)
-  PROPERTY_REF(bool, dump_movement)
-  PROPERTY_REF(bool, individual_movement)
-  PROPERTY_REF(bool, cell_movement)
-  PROPERTY_REF(bool, district_movement)
   PROPERTY_REF(bool, is_farm_output)
   PROPERTY_REF(std::string, reporter_type)
   PROPERTY_REF(int, replicate)
@@ -105,11 +100,6 @@ public:
   void monthly_report();
 
   void add_reporter(Reporter* reporter);
-
-  // True if movement should be reported by individuals, false otherwise.
-  [[nodiscard]] bool report_movement() const {
-    return (individual_movement_ || cell_movement_ || district_movement_);
-  }
 
 private:
   IStrategy* treatment_strategy_{nullptr};

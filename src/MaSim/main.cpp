@@ -11,7 +11,7 @@
 
 #include "easylogging++.h"
 /* #include "error_handler.hxx" */
-#include "Helpers/DbLoader.hxx"
+#include "Core/Config/Config.h"
 #include "Helpers/OSHelpers.h"
 #include "Model.h"
 #include "Reporters/Reporter.h"
@@ -93,17 +93,12 @@ void handle_cli(Model* model, int argc, char** argv, int &job_number,
    * -h / --help   - help screen
    * -i / --input  - input file
    * -j            - cluster job number
-   * -l / --load   - load genotypes and exit
    * -o            - path for output files
    * -r            - reporter type
    * -s            - study to associate with the configuration, database id
    *
-   * --dump        - dump the movement matrix as calculated
    * --lr          - list the possible reporters
    * --lg          - list the possible genotypes and their ids
-   * --im          - record individual movement data
-   * --mc          - record the movement between cells
-   * --md          - record the movement between districts
    */
   // NOLINTBEGIN(cppcoreguidelines-slicing) / Disable the slicing check while we
   // define the argument parser
@@ -130,22 +125,10 @@ void handle_cli(Model* model, int argc, char** argv, int &job_number,
       commands, "string",
       "Path for output files, default is current directory. \nEx: MaSim -p out",
       {'o'});
-  args::Flag dump_movement(commands, "dump",
-                           "Dump the movement matrix as calculated", {"dump"});
   args::Flag list_reporters(commands, "lr", "List the possible reporters",
                             {"lr"});
   args::Flag list_genotypes(commands, "lg", "List the possible genotypes",
                             {"lg"});
-  args::Flag individual_movement(commands, "im",
-                                 "Record individual movement detail", {"im"});
-  args::Flag cell_movement(
-      commands, "mc", "Record the movement between cells, cannot run with --md",
-      {"mc"});
-  args::Flag district_movement(
-      commands, "md",
-      "Record the movement between districts, cannot run with --mc", {"md"});
-  args::Flag load_genotypes(
-      commands, "load", "Load the genotypes to the database", {'l', "load"});
 
   // Allow the --v=[int] flag to be processed by START_EASYLOGGINGPP
   args::Group arguments(parser, "verbosity", args::Group::Validators::DontCare,
@@ -168,12 +151,6 @@ void handle_cli(Model* model, int argc, char** argv, int &job_number,
       exit(EXIT_SUCCESS);
     }
 
-    // Check to if both --mc and --md are set, if so, generate an error
-    if (cell_movement && district_movement) {
-      std::cerr << "--mc and --md are mutual exclusive and may not be run "
-                   "together.\n";
-      exit(EXIT_FAILURE);
-    }
   } catch (const args::Help &e) {
     std::cout << "MaSim v. " << VERSION << std::endl;
     std::cout << e.what() << parser;
@@ -224,17 +201,6 @@ void handle_cli(Model* model, int argc, char** argv, int &job_number,
     exit(EXIT_SUCCESS);
   }
 
-  // Check to see if we are doing a genotype load, do that and exit
-  if (load_genotypes) {
-    std::cout << "Loading genotypes..." << std::endl;
-    if (DbLoader::load_genotypes(input)) {
-      std::cout << "Load complete!" << std::endl;
-    } else {
-      std::cout << "Terminated with error(s)." << std::endl;
-    }
-    exit(EXIT_SUCCESS);
-  }
-
   // Set the remaining values if given
   path = input_path ? args::get(input_path) : path;
   job_number = cluster_job_number ? args::get(cluster_job_number) : 0;
@@ -246,9 +212,4 @@ void handle_cli(Model* model, int argc, char** argv, int &job_number,
   int value = study_number ? args::get(study_number) : -1;
   model->set_study_number(value);
 
-  // Flags related to how movement is recorded (or not)
-  model->set_dump_movement(dump_movement);
-  model->set_individual_movement(individual_movement);
-  model->set_cell_movement(cell_movement);
-  model->set_district_movement(district_movement);
 }

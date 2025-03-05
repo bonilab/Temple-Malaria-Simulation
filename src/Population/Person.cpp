@@ -38,7 +38,6 @@
 #include "Therapies/DrugType.h"
 #include "Therapies/MACTherapy.h"
 #include "Therapies/SCTherapy.h"
-#include "Validation/MovementValidation.h"
 
 OBJECTPOOL_IMPL(Person)
 
@@ -703,11 +702,6 @@ void Person::randomly_choose_target_location() {
           : today_target_locations_->at(static_cast<int>(
               Model::RANDOM->random_uniform(today_target_locations_->size())));
 
-  // Report the movement if need be
-  if (Model::MODEL->report_movement()) {
-    auto person_index = static_cast<int>(PersonIndexAllHandler::index());
-    MovementValidation::add_move(person_index, location_, target_location);
-  }
 
   schedule_move_to_target_location_next_day_event(target_location);
   today_target_locations_->clear();

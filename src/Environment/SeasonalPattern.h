@@ -10,9 +10,11 @@ class SeasonalPattern : public ISeasonalInfo {
 protected:
   // Vector of vectors: [district][day/month]
   std::vector<DoubleVector> district_adjustments;
-  int period;  // Either 365 for daily or 12 for monthly
-  bool is_monthly;  // Flag to indicate if we're using monthly data
+  int period{12};  // Either 365 for daily or 12 for monthly
+  bool is_monthly{true};  // Flag to indicate if we're using monthly data
 
+  int min_district_id{-1};
+  int max_district_id{-1};
   // Make this virtual so we can override it in tests
   virtual int get_district_for_location(int location) const;
   void read(const std::string &filename);

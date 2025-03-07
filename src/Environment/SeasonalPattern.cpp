@@ -49,6 +49,9 @@ void SeasonalPattern::initialize(const YAML::Node &node) {
 }
 
 int SeasonalPattern::get_district_for_location(int location) const {
+  if (SpatialData::get_instance().district_count == -1) {
+    return min_district_id;
+  }
   return SpatialData::get_instance().get_district(location);
 }
 
@@ -63,8 +66,8 @@ void SeasonalPattern::read(const std::string &filename) {
   // Skip header
   std::getline(in, line);
 
-  int min_district_id = std::numeric_limits<int>::max();
-  int max_district_id = std::numeric_limits<int>::min();
+  min_district_id = std::numeric_limits<int>::max();
+  max_district_id = std::numeric_limits<int>::min();
 
   // Temporary storage for data
   std::map<int, DoubleVector> temp_adjustments;

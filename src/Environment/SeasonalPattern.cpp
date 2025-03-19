@@ -49,10 +49,10 @@ void SeasonalPattern::initialize(const YAML::Node &node) {
 }
 
 int SeasonalPattern::get_district_for_location(int location) const {
-  if (SpatialData::get_instance().district_count == -1) {
+  if (SpatialData::get_instance().get_unit_count("district") <= 0) {
     return min_district_id;
   }
-  return SpatialData::get_instance().get_district(location);
+  return SpatialData::get_instance().get_admin_unit("district", location);
 }
 
 void SeasonalPattern::read(const std::string &filename) {
@@ -120,16 +120,16 @@ void SeasonalPattern::read(const std::string &filename) {
   int actual_district_count = max_district_id - min_district_id + 1;
 
   // Validate against SpatialData if available
-  if (SpatialData::get_instance().district_count != -1) {
+  if (SpatialData::get_instance().get_unit_count("district") > 0) {
     if (actual_district_count
-        != SpatialData::get_instance().district_count) {
+        != SpatialData::get_instance().get_unit_count("district")) {
       throw std::runtime_error(
           fmt::format("Expected {} districts, got {}",
-                      SpatialData::get_instance().district_count,
+                      SpatialData::get_instance().get_unit_count("district"),
                       actual_district_count));
     }
   }
-
+  std::cout << "Actual district count: " << actual_district_count << std::endl;
   // Size the vector to accommodate direct indexing (size = count for 0-based, count+1 for 1-based)
   district_adjustments.clear();
   district_adjustments.resize(min_district_id == 0 ? actual_district_count : actual_district_count + 1);

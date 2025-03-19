@@ -91,7 +91,7 @@ public:
 
     // Note the source district
     auto source_district =
-        SpatialData::get_instance().get_district(from_location);
+        SpatialData::get_instance().get_admin_unit("district", from_location);
 
     // Prepare the vector for results
     std::vector<double> results(number_of_locations, 0.0);
@@ -114,7 +114,7 @@ public:
       // If the source and the destination are both in the capital district,
       // penalize the travel by 50%
       if (source_district == capital_
-          && SpatialData::get_instance().get_district(destination) == capital_) {
+          && SpatialData::get_instance().get_admin_unit("district", destination) == capital_) {
         probability /= penalty_;
       }
 

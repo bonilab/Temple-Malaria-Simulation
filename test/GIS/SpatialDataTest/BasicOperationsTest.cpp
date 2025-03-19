@@ -15,7 +15,7 @@ TEST_CASE_METHOD(BasicOperationsTest, "Basic Raster Loading", "[GIS][Basic]") {
     SECTION("Verify district raster state") {
         auto& spatial_data = SpatialData::get_instance();
         REQUIRE(spatial_data.using_raster);
-        REQUIRE(spatial_data.district_count == 2);  // Districts 1 and 2
+        REQUIRE(spatial_data.get_boundary("district")->unit_count == 2);  // Districts 1 and 2
     }
 
     SECTION("Verify population raster properties") {
@@ -30,7 +30,7 @@ TEST_CASE_METHOD(BasicOperationsTest, "Basic Raster Loading", "[GIS][Basic]") {
     SECTION("Verify complete configuration state") {
         auto& spatial_data = SpatialData::get_instance();
         REQUIRE(spatial_data.using_raster);
-        REQUIRE(spatial_data.district_count == 2);
+        REQUIRE(spatial_data.get_boundary("district")->unit_count == 2);
     }
 
     TearDown();

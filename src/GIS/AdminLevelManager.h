@@ -10,10 +10,22 @@
 #include "easylogging++.h"
 
 
-struct LookupResult {
-    std::vector<int> lookup;
-    int first_index;
-    int unit_count;
+/**
+* @struct BoundaryData
+* @brief Contains all data related to a single administrative boundary level.
+*
+* This structure holds both the raw raster data and derived lookup information
+* for efficient querying of administrative units and their associated locations.
+*/
+struct BoundaryData {
+    // Maps location ID to its administrative unit ID for this level
+    std::vector<int> location_to_unit;        
+    // Maps unit ID to all locations within that unit
+    std::vector<std::vector<int>> unit_to_locations;
+
+    int min_unit_id{-1};                ///< Minimum unit ID in this level
+    int max_unit_id{-1};                ///< Maximum unit ID in this level
+    int unit_count{0};                  ///< Number of unique units in this level
 };
 
 /**
@@ -60,25 +72,11 @@ struct LookupResult {
  */
 class AdminLevelManager {
 private:
-    /**
-     * @struct BoundaryData
-     * @brief Contains all data related to a single administrative boundary level.
-     *
-     * This structure holds both the raw raster data and derived lookup information
-     * for efficient querying of administrative units.
-     */
-    struct BoundaryData {
-        std::unique_ptr<AscFile> raster;        ///< Raw raster data
-        std::vector<int> location_lookup;        ///< Maps locations to admin units
-        int first_index{-1};                     ///< 0 or 1 based indexing
-        int count{0};                            ///< Number of unique admin units
-        std::string description;                 ///< Optional description
-    };
 
     // Efficient lookup storage
-    std::unordered_map<std::string, int> name_to_id;  ///< Maps level names to internal IDs
-    std::vector<std::string> id_to_name;              ///< Maps internal IDs to level names
-    std::vector<BoundaryData> boundaries;             ///< Stores boundary data for each level
+    std::unordered_map<std::string, int> name_to_id;  ///< Maps admin level names to internal admin IDs
+    std::vector<std::string> id_to_name;              ///< Maps internal IDs to admin level names
+    std::vector<BoundaryData> boundaries;             ///< Stores boundary data for each admin level
     
     bool has_district_{false};  ///< Tracks if mandatory district level is configured
 
@@ -110,38 +108,37 @@ public:
     /**
      * @brief Register a new administrative level
      * @param name The name of the administrative level
-     * @param description Optional description
      * @return The ID assigned to this level
      * @throws std::runtime_error if name already exists
      */
-    int register_level(const std::string& name, const std::string& description = "");
+    int register_level(const std::string& name);
 
     /**
      * @brief Set up boundary data for an administrative level
      * @param name The name of the administrative level
-     * @param raster The raster file containing boundary data
+     * @param raster the raster file containing boundary data
      * @throws std::runtime_error if level doesn't exist or raster is invalid
      */
-    void setup_boundary(const std::string& name, std::unique_ptr<AscFile> raster);
+    void setup_boundary(const std::string& name, AscFile* raster);
 
     /**
      * @brief Get the admin unit ID for a location
-     * @param location The location ID
      * @param level_name The name of the administrative level
+     * @param location The location ID
      * @return The admin unit ID
      * @throws std::runtime_error if level doesn't exist
      * @throws std::out_of_range if location is invalid
      */
-    int get_admin_unit(int location, const std::string& level_name) const;
+    int get_admin_unit(const std::string& level_name, int location) const;
 
     /**
      * @brief Get all locations in an administrative unit
-     * @param unit_id The admin unit ID
      * @param level_name The name of the administrative level
-     * @return Vector of location IDs
+     * @param unit_id The admin unit ID
+     * @return Const reference to vector of location IDs
      * @throws std::runtime_error if level doesn't exist
      */
-    std::vector<int> get_locations_in_unit(int unit_id, const std::string& level_name) const;
+    const std::vector<int>& get_locations_in_unit(const std::string& level_name, int unit_id) const;
 
     /**
      * @brief Get boundary data for an administrative level
@@ -174,10 +171,11 @@ private:
 
     /**
      * @brief Populate lookup data for a boundary
-     * @param boundary The boundary data to populate
-     * @return The number of unique admin units found
+     * @note remember to check with LocationDB outside 
+     * @param raster The raster file to populate
+     * @return BoundaryData struct containing lookup data
      */
-    LookupResult populate_lookup(const AscFile* raster);
+    BoundaryData populate_lookup(const AscFile* raster);
 
     /**
      * @brief Validate a raster file

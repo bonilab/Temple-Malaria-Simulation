@@ -42,7 +42,7 @@ void DistrictImportationDailyEvent::execute() {
   if (number_of_importation_cases == 0) { return; }
 
 
-  const auto &locations = SpatialData::get_instance().get_district_locations(district_);
+  const auto &locations = SpatialData::get_instance().get_locations_in_unit("district", district_);
 
   auto* pi =
       Model::POPULATION->get_person_index<PersonIndexByLocationStateAgeClass>();

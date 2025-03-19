@@ -239,9 +239,9 @@ IStrategy* StrategyBuilder::buildDistrictMftStrategy(const YAML::Node &node,
 
   // Get district ID range from SpatialData
   const auto& spatial_data = SpatialData::get_instance();
-  const auto min_district_id = spatial_data.min_district_id;
-  const auto max_district_id = spatial_data.max_district_id;
-  const auto expected_district_count = spatial_data.district_count;
+  const auto min_district_id = spatial_data.get_boundary("district")->min_unit_id;
+  const auto max_district_id = spatial_data.get_boundary("district")->max_unit_id;
+  const auto expected_district_count = spatial_data.get_boundary("district")->unit_count;
 
   // Read each of the definitions
   for (auto ndx = 0; ndx < node["definitions"].size(); ndx++) {

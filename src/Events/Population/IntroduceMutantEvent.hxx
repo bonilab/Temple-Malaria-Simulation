@@ -29,7 +29,7 @@ private:
     // Calculate the target fraction of the district infections and perform them
     // as needed
     auto locations =
-        SpatialData::get_instance().get_district_locations(district_);
+        SpatialData::get_instance().get_locations_in_unit("district", district_);
     double target_fraction = calculate(locations);
     auto count = (target_fraction > 0) ? mutate(locations, target_fraction) : 0;
 

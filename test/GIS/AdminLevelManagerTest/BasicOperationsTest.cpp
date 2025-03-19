@@ -7,14 +7,14 @@ TEST_CASE_METHOD(BasicOperationsTest, "Basic Registration Operations", "[AdminLe
     SetUp();
 
     SECTION("Register new administrative level") {
-        REQUIRE_NOTHROW(manager.register_level("district", "Test District"));
+        REQUIRE_NOTHROW(manager.register_level("district"));
         REQUIRE(manager.has_level("district"));
         REQUIRE(manager.has_district());
     }
 
     SECTION("Register multiple levels") {
-        REQUIRE_NOTHROW(manager.register_level("district", "Test District"));
-        REQUIRE_NOTHROW(manager.register_level("province", "Test Province"));
+        REQUIRE_NOTHROW(manager.register_level("district"));
+        REQUIRE_NOTHROW(manager.register_level("province"));
         REQUIRE(manager.has_level("district"));
         REQUIRE(manager.has_level("province"));
         
@@ -57,10 +57,10 @@ TEST_CASE_METHOD(BasicOperationsTest, "Basic Boundary Setup", "[AdminLevel][Basi
         REQUIRE(manager.has_district());
 
         // Load and verify raster before moving
-        AscFile* raw_raster = AscFileManager::read("test_district.asc");
-        REQUIRE(raw_raster != nullptr);
-        REQUIRE(raw_raster->NROWS == 3);
-        REQUIRE(raw_raster->NCOLS == 3);
+        auto raster = std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"));
+        REQUIRE(raster != nullptr);
+        REQUIRE(raster->NROWS == 3);
+        REQUIRE(raster->NCOLS == 3);
         
         // Verify location database is properly set up
         REQUIRE(Model::CONFIG != nullptr);
@@ -71,16 +71,15 @@ TEST_CASE_METHOD(BasicOperationsTest, "Basic Boundary Setup", "[AdminLevel][Basi
         REQUIRE(Model::CONFIG->location_db()[0].coordinate != nullptr);
         
         // Setup boundary with verified raster
-        auto raster = std::unique_ptr<AscFile>(raw_raster);
-        manager.setup_boundary("district", std::move(raster));
+        manager.setup_boundary("district", raster.get());
         
         // Verify the unit count and mappings
         REQUIRE(manager.get_unit_count("district") == 3);  // Districts 1, 2, and 3
         
         // Verify some specific location-to-district mappings
-        REQUIRE(manager.get_admin_unit(0, "district") == 1);  // Top-left location should be in district 1
-        REQUIRE(manager.get_admin_unit(2, "district") == 2);  // Top-right location should be in district 2
-        REQUIRE(manager.get_admin_unit(8, "district") == 3);  // Bottom-right location should be in district 3
+        REQUIRE(manager.get_admin_unit("district", 0) == 1);  // Top-left location should be in district 1
+        REQUIRE(manager.get_admin_unit("district", 2) == 2);  // Top-right location should be in district 2
+        REQUIRE(manager.get_admin_unit("district", 8) == 3);  // Bottom-right location should be in district 3
     }
 
     SECTION("Setup multiple boundaries safely") {
@@ -107,11 +106,11 @@ TEST_CASE_METHOD(BasicOperationsTest, "Basic Boundary Setup", "[AdminLevel][Basi
         // Setup boundaries one at a time, verifying each step
         auto district_raster = std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"));
         REQUIRE(district_raster != nullptr);
-        REQUIRE_NOTHROW(manager.setup_boundary("district", std::move(district_raster)));
+        REQUIRE_NOTHROW(manager.setup_boundary("district", district_raster.get()));
         
         auto province_raster = std::unique_ptr<AscFile>(AscFileManager::read("test_province.asc"));
         REQUIRE(province_raster != nullptr);
-        REQUIRE_NOTHROW(manager.setup_boundary("province", std::move(province_raster)));
+        REQUIRE_NOTHROW(manager.setup_boundary("province", province_raster.get()));
         
         // Verify final state
         REQUIRE(manager.get_unit_count("district") == 3);

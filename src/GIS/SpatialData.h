@@ -16,6 +16,7 @@
 
 #include "AscFile.h"
 #include "Core/PropertyMacro.h"
+#include "AdminLevelManager.h"
 
 class SpatialData {
 public:
@@ -106,19 +107,15 @@ public:
   // was written when we were using 5x5 km cells
   float cell_size = 0;
 
-  // Count of district loaded in the map, default zero, lazy initialization to
-  // actual value
-  int district_count = -1;
-
-  int min_district_id = -1;
-  int max_district_id = -1;
-
   // Add raster_info as a data member
   RasterInformation raster_info;
 
 
   // true if any raster file has been loaded, false otherwise
   bool using_raster = false;
+
+  // Add AdminLevelManager as a member
+  std::unique_ptr<AdminLevelManager> admin_manager_;
 
   // Constructor
   SpatialData();
@@ -191,28 +188,41 @@ public:
 
 
   /**
-   * @brief Retrieves the district ID for a given location using the pre-computed lookup table.
-   *
-   * This method provides fast district lookups using the pre-computed district_lookup_ table.
-   * The district IDs match those in the original raster file (either 0-based or 1-based).
-   *
-   * @param location The location ID for which the district ID is requested.
-   * @return The district ID for the given location.
+   * @brief Retrieves the administrative unit ID for a given location
+   * @param location The location ID
+   * @param level_name The administrative level name (e.g., "district")
+   * @return The administrative unit ID for the given location
    * @throws std::out_of_range if location is invalid
-   * @throws std::runtime_error if district data is not initialized
+   * @throws std::runtime_error if admin level is not initialized
    */
-  int get_district(int location);
+  int get_admin_unit(const std::string& level_name, int location) const {
+    return admin_manager_->get_admin_unit(level_name, location);
+  }
 
   /**
-   * @brief Returns a vector of location IDs that belong to the specified district.
-   * Uses a pre-computed mapping for efficient lookups.
-   * 
-   * @param district The district ID (matches IDs from the raster file, can be 0-based or 1-based)
-   * @return const reference to vector of location IDs in the district
-   * @throws std::runtime_error if districts are not loaded
-   * @throws std::out_of_range if district ID is invalid
+   * @brief Returns locations in the specified administrative unit
+   * @param unit_id The administrative unit ID
+   * @param level_name The administrative level name (e.g., "district")
+   * @return Const reference to vector of location IDs in the administrative unit
+   * @throws std::runtime_error if admin level is not initialized
    */
-  const std::vector<int>& get_district_locations(int district) const;
+  const std::vector<int>& get_locations_in_unit(const std::string& level_name, int unit_id) const {
+    return admin_manager_->get_locations_in_unit(level_name, unit_id);
+  }
+
+  int get_unit_count(const std::string& level_name) const {
+    if (admin_manager_ == nullptr) {
+      return -1;
+    }
+    return admin_manager_->get_unit_count(level_name);
+  }
+
+  const BoundaryData* get_boundary(const std::string& level_name) const {
+    if (admin_manager_ == nullptr) {
+      return nullptr;
+    }
+    return admin_manager_->get_boundary(level_name);
+  }
 
   // Get a reference to the AscFile raster, may be a nullptr
   AscFile* get_raster(SpatialFileType type) { return data[type].get(); }
@@ -253,9 +263,6 @@ public:
   void reset() {
     // Reset each unique_ptr individually
     for (auto &ptr : data) { ptr.reset(); }
-    district_count = -1;
-    min_district_id = -1;
-    max_district_id = -1;
   }
 
   // Add method to validate raster information

@@ -8,46 +8,29 @@ TEST_CASE_METHOD(ConfigurationTest, "Indexing Configuration", "[AdminLevel][Conf
 
     SECTION("Zero-based indexing") {
         create_test_raster("test_district.asc", true);  // zero-based
-        
+        auto raster = std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"));
         REQUIRE_NOTHROW(manager.register_level("district"));
-        REQUIRE_NOTHROW(manager.setup_boundary("district", 
-            std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"))));
+        REQUIRE_NOTHROW(manager.setup_boundary("district", raster.get()));
         
         const auto* boundary = manager.get_boundary("district");
         REQUIRE(boundary != nullptr);
-        REQUIRE(boundary->first_index == 0);
+        REQUIRE(boundary->min_unit_id == 0);
+        REQUIRE(boundary->max_unit_id == 2);
+        REQUIRE(boundary->unit_count == 3);
     }
 
     SECTION("One-based indexing") {
         create_test_raster("test_district.asc", false);  // one-based
         
         REQUIRE_NOTHROW(manager.register_level("district"));
-        REQUIRE_NOTHROW(manager.setup_boundary("district", 
-            std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"))));
+        auto raster = std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"));
+        REQUIRE_NOTHROW(manager.setup_boundary("district", raster.get()));
         
         const auto* boundary = manager.get_boundary("district");
         REQUIRE(boundary != nullptr);
-        REQUIRE(boundary->first_index == 1);
-    }
-
-    SECTION("Different raster dimensions") {
-        create_test_raster("test_district.asc", true, 5, 4);  // 5x4 raster
-        
-        REQUIRE_NOTHROW(manager.register_level("district"));
-        REQUIRE_NOTHROW(manager.setup_boundary("district", 
-            std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"))));
-        
-        const auto* boundary = manager.get_boundary("district");
-        REQUIRE(boundary != nullptr);
-        REQUIRE(boundary->raster->NROWS == 5);
-        REQUIRE(boundary->raster->NCOLS == 4);
-    }
-
-    SECTION("Optional descriptions") {
-        REQUIRE_NOTHROW(manager.register_level("district", "Health Districts"));
-        const auto* boundary = manager.get_boundary("district");
-        REQUIRE(boundary != nullptr);
-        REQUIRE(boundary->description == "Health Districts");
+        REQUIRE(boundary->min_unit_id == 1);
+        REQUIRE(boundary->max_unit_id == 3);
+        REQUIRE(boundary->unit_count == 3);
     }
 
     TearDown();

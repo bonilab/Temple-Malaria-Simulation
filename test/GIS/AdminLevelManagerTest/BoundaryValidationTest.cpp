@@ -22,8 +22,8 @@ TEST_CASE_METHOD(BoundaryValidationTest, "Invalid Raster Validation", "[AdminLev
         file.close();
 
         REQUIRE_NOTHROW(manager.register_level("district"));
-        REQUIRE_THROWS(manager.setup_boundary("district", 
-            std::unique_ptr<AscFile>(AscFileManager::read("test_invalid.asc"))));
+        auto district_raster = std::unique_ptr<AscFile>(AscFileManager::read("test_invalid.asc"));
+        REQUIRE_THROWS(manager.setup_boundary("district", district_raster.get()));
     }
 
     SECTION("Invalid indexing values") {
@@ -36,8 +36,8 @@ TEST_CASE_METHOD(BoundaryValidationTest, "Invalid Raster Validation", "[AdminLev
         create_custom_raster("test_invalid.asc", invalid_values);
 
         REQUIRE_NOTHROW(manager.register_level("district"));
-        REQUIRE_THROWS_AS(manager.setup_boundary("district", 
-            std::unique_ptr<AscFile>(AscFileManager::read("test_invalid.asc"))),
+        auto district_raster = std::unique_ptr<AscFile>(AscFileManager::read("test_invalid.asc"));
+        REQUIRE_THROWS_AS(manager.setup_boundary("district", district_raster.get()),
             std::runtime_error);
     }
 
@@ -50,8 +50,8 @@ TEST_CASE_METHOD(BoundaryValidationTest, "Invalid Raster Validation", "[AdminLev
         create_custom_raster("test_invalid.asc", nodata_values);
 
         REQUIRE_NOTHROW(manager.register_level("district"));
-        REQUIRE_THROWS(manager.setup_boundary("district", 
-            std::unique_ptr<AscFile>(AscFileManager::read("test_invalid.asc"))));
+        auto district_raster = std::unique_ptr<AscFile>(AscFileManager::read("test_invalid.asc"));
+        REQUIRE_THROWS(manager.setup_boundary("district", district_raster.get()));
     }
 
     TearDown();
@@ -78,12 +78,12 @@ TEST_CASE_METHOD(BoundaryValidationTest, "Raster Dimension Consistency", "[Admin
         create_custom_raster("test_province.asc", province_values);
 
         REQUIRE_NOTHROW(manager.register_level("district"));
-        REQUIRE_NOTHROW(manager.setup_boundary("district", 
-            std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"))));
+        auto district_raster = std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"));
+        REQUIRE_NOTHROW(manager.setup_boundary("district", district_raster.get()));
         
-        REQUIRE_NOTHROW(manager.register_level("province"));
-        REQUIRE_NOTHROW(manager.setup_boundary("province", 
-            std::unique_ptr<AscFile>(AscFileManager::read("test_province.asc"))));
+        REQUIRE_NOTHROW(manager.register_level("province"));    
+        auto province_raster = std::unique_ptr<AscFile>(AscFileManager::read("test_province.asc"));
+        REQUIRE_NOTHROW(manager.setup_boundary("province", province_raster.get()));
     }
 
     SECTION("Different dimensions are rejected") {
@@ -105,13 +105,13 @@ TEST_CASE_METHOD(BoundaryValidationTest, "Raster Dimension Consistency", "[Admin
         create_custom_raster("test_province.asc", province_values);
 
         REQUIRE_NOTHROW(manager.register_level("district"));
-        REQUIRE_NOTHROW(manager.setup_boundary("district", 
-            std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"))));
+        auto district_raster = std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"));
+        REQUIRE_NOTHROW(manager.setup_boundary("district", district_raster.get()));
         
         REQUIRE_NOTHROW(manager.register_level("province"));
-        REQUIRE_THROWS_WITH(manager.setup_boundary("province", 
-            std::unique_ptr<AscFile>(AscFileManager::read("test_province.asc"))),
-            "All raster files must have the same dimensions. Expected 3x3, got 4x4");
+        auto province_raster = std::unique_ptr<AscFile>(AscFileManager::read("test_province.asc"));
+        REQUIRE_NOTHROW(manager.setup_boundary("province", province_raster.get()));
+        REQUIRE_THROWS(manager.validate(), "All boundaries must have the same dimensions.");
     }
 
     TearDown();
@@ -133,8 +133,8 @@ TEST_CASE_METHOD(BoundaryValidationTest, "Configuration Validation", "[AdminLeve
     SECTION("Valid configuration with district") {
         create_test_raster("test_district.asc");
         REQUIRE_NOTHROW(manager.register_level("district"));
-        REQUIRE_NOTHROW(manager.setup_boundary("district", 
-            std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"))));
+        auto raster = std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"));
+        REQUIRE_NOTHROW(manager.setup_boundary("district", raster.get()));
         REQUIRE_NOTHROW(manager.validate());
     }
 

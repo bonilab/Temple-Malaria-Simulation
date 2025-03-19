@@ -16,7 +16,7 @@ void SQLiteDistrictReporter::initialize(int jobNumber,
                                         const std::string &path) {
   // Inform the user of the reporter type and make sure there are districts
   VLOG(1) << "Using SQLiteDbReporterwith aggregation at the district level.";
-  if (SpatialData::get_instance().district_count <= 0) {
+  if (SpatialData::get_instance().get_unit_count("district") <= 0) {
     LOG(ERROR) << "District raster must be present when aggregating data at "
                   "the district level.";
     throw std::invalid_argument("No district raster present");
@@ -26,7 +26,7 @@ void SQLiteDistrictReporter::initialize(int jobNumber,
 }
 
 void SQLiteDistrictReporter::count_infections_for_location(int location) {
-  auto district = SpatialData::get_instance().get_district(location);
+  auto district = SpatialData::get_instance().get_admin_unit("district", location);
   auto &ageClasses = Model::CONFIG->age_structure();
   auto* index =
       Model::POPULATION->get_person_index<PersonIndexByLocationStateAgeClass>();
@@ -47,7 +47,7 @@ void SQLiteDistrictReporter::count_infections_for_location(int location) {
 }
 
 void SQLiteDistrictReporter::collect_site_data_for_location(int location) {
-  auto district = SpatialData::get_instance().get_district(location);
+  auto district = SpatialData::get_instance().get_admin_unit("district", location);
   auto &ageClasses = Model::CONFIG->age_structure();
 
   count_infections_for_location(location);
@@ -117,8 +117,8 @@ void SQLiteDistrictReporter::collect_site_data_for_location(int location) {
 
 void SQLiteDistrictReporter::calculate_and_build_up_site_data_insert_values(
     int monthId) {
-  auto min_district_id = SpatialData::get_instance().min_district_id;
-  auto max_district_id = SpatialData::get_instance().max_district_id;
+  auto min_district_id = SpatialData::get_instance().get_boundary("district")->min_unit_id;
+  auto max_district_id = SpatialData::get_instance().get_boundary("district")->max_unit_id;
   insert_values.clear();
 
   for (auto district = min_district_id; district <= max_district_id; district++) {
@@ -176,7 +176,7 @@ void SQLiteDistrictReporter::monthly_report_site_data(int monthId) {
   TransactionGuard transaction{db.get()};
 
   // Calculate the actual size needed for vectors (max_district_id + 1)
-  auto vectorSize = SpatialData::get_instance().max_district_id + 1;
+  auto vectorSize = SpatialData::get_instance().get_boundary("district")->max_unit_id + 1;
   auto &ageClasses = Model::CONFIG->age_structure();
 
   // Prepare the data structures
@@ -199,7 +199,7 @@ void SQLiteDistrictReporter::monthly_report_site_data(int monthId) {
 }
 
 void SQLiteDistrictReporter::collect_genome_data_for_location(size_t location) {
-  auto district = SpatialData::get_instance().get_district(location);
+  auto district = SpatialData::get_instance().get_admin_unit("district", location);
   auto* index =
       Model::POPULATION->get_person_index<PersonIndexByLocationStateAgeClass>();
   auto ageClasses = index->vPerson()[0][0].size();
@@ -289,8 +289,8 @@ void SQLiteDistrictReporter::collect_genome_data_for_a_person(Person* person,
 
 void SQLiteDistrictReporter::build_up_genome_data_insert_values(int monthId) {
   auto numGenotypes = Model::CONFIG->number_of_parasite_types();
-  auto min_district_id = SpatialData::get_instance().min_district_id;
-  auto max_district_id = SpatialData::get_instance().max_district_id;
+  auto min_district_id = SpatialData::get_instance().get_boundary("district")->min_unit_id;
+  auto max_district_id = SpatialData::get_instance().get_boundary("district")->max_unit_id;
 
   insert_values.clear();
   // Iterate over the districts and append the query
@@ -320,7 +320,7 @@ void SQLiteDistrictReporter::monthly_report_genome_data(int monthId) {
   TransactionGuard transaction{db.get()};
 
   // Calculate the actual size needed for vectors (max_district_id + 1)
-  auto vectorSize = SpatialData::get_instance().max_district_id + 1;
+  auto vectorSize = SpatialData::get_instance().get_boundary("district")->max_unit_id + 1;
   auto numGenotypes = Model::CONFIG->number_of_parasite_types();
   auto* index =
       Model::POPULATION->get_person_index<PersonIndexByLocationStateAgeClass>();

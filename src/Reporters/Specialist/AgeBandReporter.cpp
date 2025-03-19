@@ -46,7 +46,7 @@ void AgeBandReporter::initialize(int job_number, const std::string &path) {
   // Build a lookup for location to district
   for (auto loc = 0; loc < Model::CONFIG->number_of_locations(); loc++) {
     district_lookup.emplace_back(
-        SpatialData::get_instance().get_district(loc));
+        SpatialData::get_instance().get_admin_unit("district", loc));
   }
 
   // Log the header for the PfPR and cases file, this is a bit redundant because
@@ -73,7 +73,7 @@ void AgeBandReporter::monthly_report() {
 
   // Prepare some values
   auto age_classes = Model::CONFIG->number_of_age_classes();
-  auto districts = SpatialData::get_instance().district_count;
+  auto districts = SpatialData::get_instance().get_boundary("district")->unit_count;
   std::vector<std::vector<int>> population(districts,
                                            std::vector<int>(age_classes));
   std::vector<std::vector<double>> prevalence(districts,

@@ -90,7 +90,7 @@ std::vector<Event*> PopulationEventBuilder::build_introduce_mutant_event(
         throw std::invalid_argument(
             "Target district must be greater than or equal to zero");
       }
-      if (district > SpatialData::get_instance().district_count) {
+      if (district > SpatialData::get_instance().get_unit_count("district")) {
         LOG(ERROR) << "Target district is greater than the district count.";
         throw std::invalid_argument(
             "Target district greater than district count.");

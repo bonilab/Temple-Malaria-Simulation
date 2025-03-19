@@ -58,8 +58,8 @@ TEST_CASE_METHOD(ErrorHandlingTest, "Error Handling for File Loading", "[GIS][Er
         
         auto node = createBasicNode();
         node["district_raster"] = "test_invalid.asc";
-        REQUIRE_THROWS_AS(spatial_data.parse(node), std::invalid_argument);
-        
+        REQUIRE_THROWS_AS(spatial_data.parse(node), std::runtime_error);
+
         // Clean up both files
         std::remove("test_invalid.asc");
         std::remove("test_population.asc");
@@ -95,7 +95,7 @@ TEST_CASE_METHOD(ErrorHandlingTest, "Error Handling for Data Access", "[GIS][Err
     auto& spatial_data = SpatialData::get_instance();
 
     SECTION("Invalid location access") {
-        REQUIRE_THROWS_AS(spatial_data.get_district(999), std::out_of_range);
+        REQUIRE_THROWS_AS(spatial_data.get_admin_unit("district", 999), std::out_of_range);
         // Add other boundary tests as needed:
         // REQUIRE_THROWS_AS(spatial_data.get_population(999), std::out_of_range);
         // REQUIRE_THROWS_AS(spatial_data.get_cell_coordinates(999), std::out_of_range);

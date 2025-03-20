@@ -23,17 +23,6 @@ private:
   RETURNING id;
   )"""";
 
-  const std::string insert_genotype_query_prefix_ = R"""(
-    INSERT INTO MonthlyGenomeData 
-    (MonthlyDataId, LocationId, GenomeId, Occurrences, 
-    ClinicalOccurrences, Occurrences0to5, Occurrences2to10, 
-    WeightedOccurrences) 
-    VALUES 
-  )""";
-  // this query must be created in the initialize function (after the config is
-  // initialized)
-  std::string insert_site_query_prefix_;
-
   // Generate table name for admin level
   std::string get_site_table_name(int level_id) const;
   

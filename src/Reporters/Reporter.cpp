@@ -52,10 +52,6 @@ Reporter* Reporter::MakeReport(ReportType report_type) {
       return new SeasonalImmunity();
     case AGE_BAND_REPORTER:
       return new AgeBandReporter();
-    // case SQLITE_DISTRICT_REPORTER:
-    //   return new SQLiteDistrictReporter();
-    // case SQLITE_PIXEL_REPORTER:
-    //   return new SQLitePixelReporter();
     case SQLITE_MONTHLY_REPORTER:
       return new SQLiteMonthlyReporter();
 #ifdef ENABLE_TRAVEL_TRACKING

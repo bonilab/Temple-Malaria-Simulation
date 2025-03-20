@@ -36,6 +36,15 @@ Version 4.2.0 introduces flexible multi-administrative boundaries support, allow
    - Integration tests with location system
    - Comprehensive test fixtures for different admin level scenarios
 
+6. Multi-Level Admin Reporting:
+   - SQLiteMonthlyReporter now reports data for all administrative levels
+   - Each admin level has its own dedicated database tables:
+     - `monthlysitedata_[level_name]` - Site data aggregated by admin level
+     - `monthlygenomedata_[level_name]` - Genome data aggregated by admin level
+   - Maintains backward compatibility with original district-level reporting
+   - Performance optimizations for multiple level reporting
+   - Consistent data aggregation methodology across all admin levels
+
 ## 🚧 Ongoing Improvements
 
 1. Data Validation and Error Handling:
@@ -45,9 +54,10 @@ Version 4.2.0 introduces flexible multi-administrative boundaries support, allow
    - Additional coordinate system consistency checks
 
 2. Reporting System:
-   - Independent aggregation per admin level
-   - Flexible reporting options
-   - Custom boundary grouping
+   - Enhanced visualization options for multi-level reports
+   - Additional aggregation metrics
+   - Custom admin-level filtering options
+   - Performance optimizations for large datasets
 
 ## 🔜 Planned for Future Releases
 
@@ -97,6 +107,35 @@ int get_unit_count(string level_name);             // Get number of units in a l
 int get_admin_unit(string level_name, int location); // Get admin unit for a location
 vector<int> get_locations_in_unit(string level_name, int unit); // Get locations in a unit
 ```
+
+### Reporting Database Schema
+Each administrative level now has dedicated database tables:
+
+```sql
+CREATE TABLE monthlysitedata_[level_name] (
+    monthlydataid INTEGER NOT NULL,
+    locationid INTEGER NOT NULL,  -- This is the admin unit ID for this level
+    population INTEGER NOT NULL,
+    clinicalepisodes INTEGER NOT NULL,
+    -- Other fields...
+    PRIMARY KEY (monthlydataid, locationid)
+);
+
+CREATE TABLE monthlygenomedata_[level_name] (
+    monthlydataid INTEGER NOT NULL,
+    locationid INTEGER NOT NULL,  -- This is the admin unit ID for this level
+    genomeid INTEGER NOT NULL,
+    -- Other fields...
+    PRIMARY KEY (monthlydataid, genomeid, locationid)
+);
+```
+
+Where `[level_name]` is the name of the administrative level as defined in your configuration. For example:
+- `monthlysitedata_district` - For district-level data
+- `monthlysitedata_province` - For province-level data
+- `monthlysitedata_region` - For region-level data
+
+This naming convention makes it easier to identify which table corresponds to which administrative level when querying the database.
 
 ### Validation Rules
 1. Mandatory Requirements:
@@ -158,6 +197,18 @@ if (spatial_data.has_admin_level("province")) {
     int province = spatial_data.get_admin_unit("province", location_id);
     auto province_locations = spatial_data.get_locations_in_unit("province", province);
 }
+```
+
+5. Access multi-level reports in the SQLite database:
+```sql
+-- Get data for district level
+SELECT * FROM monthlysitedata_district;
+
+-- Get data for province level
+SELECT * FROM monthlysitedata_province;
+
+-- Get data for specific unit in a specific level
+SELECT * FROM monthlysitedata_province WHERE locationid = 3;
 ```
 
 This new API provides a consistent interface for working with any administrative level while maintaining backward compatibility through the "district" level name.

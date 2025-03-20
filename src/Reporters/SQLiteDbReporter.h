@@ -42,9 +42,6 @@ protected:
 
   void populate_db_schema();
 
-  // Return the character code that indicates the level of genotype records (c:
-  // cell, d: district)
-  virtual char get_genotype_level() = 0;
   virtual void monthly_report_genome_data(int monthId) = 0;
   virtual void monthly_report_site_data(int monthId) = 0;
 

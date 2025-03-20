@@ -14,9 +14,6 @@ class SQLitePixelReporter : public SQLiteDbReporter {
   DELETE_COPY_AND_MOVE(SQLitePixelReporter);
 
 protected:
-  // Return the character code that indicates the level of genotype records (c:
-  // cell, d: district)
-  char get_genotype_level() override { return 'C'; }
   void monthly_report_genome_data(int monthId) override;
   void monthly_report_site_data(int monthId) override;
 

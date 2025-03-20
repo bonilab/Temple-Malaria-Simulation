@@ -1,19 +1,19 @@
 
 /*
- * SQLiteDistrictReporter.h
+ * SQLiteMonthlyReporter.h
  *
- * Override the base DbReporter and log genotype information at the district
+ * Override the base DbReporter and log genotype information at the monthly
  * level.
  */
-#ifndef SQLITEDISTRICTREPORTER_H
-#define SQLITEDISTRICTREPORTER_H
+#ifndef SQLITEMONTHLYREPORTER_H
+#define SQLITEMONTHLYREPORTER_H
 
 #include "Reporters/SQLiteDbReporter.h"
 
 class Person;
 
-class SQLiteDistrictReporter : public SQLiteDbReporter {
-  DELETE_COPY_AND_MOVE(SQLiteDistrictReporter);
+class SQLiteMonthlyReporter : public SQLiteDbReporter {
+  DELETE_COPY_AND_MOVE(SQLiteMonthlyReporter);
 
   void monthly_report_genome_data(int monthId) override;
   void monthly_report_site_data(int monthId) override;
@@ -51,8 +51,8 @@ private:
   void build_up_genome_data_insert_values(int monthId);
 
 public:
-  SQLiteDistrictReporter() = default;
-  ~SQLiteDistrictReporter() override = default;
+  SQLiteMonthlyReporter() = default;
+  ~SQLiteMonthlyReporter() override = default;
 
   // Initialize the reporter with job number and path
   void initialize(int jobNumber, const std::string &path) override;

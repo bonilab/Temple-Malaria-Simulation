@@ -13,6 +13,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <map>
 
 #include "AscFile.h"
 #include "Core/PropertyMacro.h"
@@ -102,6 +103,8 @@ public:
   const std::string TREATMENT_RATE_UNDER5 = "pr_treatment_under5";
   const std::string TREATMENT_RATE_OVER5 = "pr_treatment_over5";
 
+  // Add constant for the new admin boundaries configuration section
+  const std::string ADMIN_BOUNDARIES = "administrative_boundaries";
 
   // The size of the cells in the raster, the units shouldn't matter, but this
   // was written when we were using 5x5 km cells
@@ -258,6 +261,44 @@ public:
   bool validate_raster_info(const RasterInformation &new_info,
                             std::string &errors);
 
+  /**
+   * @brief Returns a list of all available administrative levels
+   * @return Vector of administrative level names
+   */
+  const std::vector<std::string>& get_admin_levels() const {
+    if (admin_manager_ == nullptr) {
+      static const std::vector<std::string> empty_vector;
+      return empty_vector;
+    }
+    return admin_manager_->get_level_names();
+  }
+
+  /**
+   * @brief Checks if an administrative level exists
+   * @param level_name The administrative level name to check
+   * @return true if the level exists, false otherwise
+   */
+  bool has_admin_level(const std::string& level_name) const {
+    if (admin_manager_ == nullptr) {
+      return false;
+    }
+    return admin_manager_->has_level(level_name);
+  }
+
+  /**
+   * @brief Gets all units in an administrative level
+   * @param level_name The administrative level name
+   * @return Vector of unit IDs for the requested level
+   * @throws std::runtime_error if admin level does not exist
+   */
+  const std::pair<int,int> get_admin_units(const std::string& level_name) const {
+    if (admin_manager_ == nullptr) {
+      // return an invalid pair
+      return {-1,-1};
+    }
+    return admin_manager_->get_units(level_name);
+  }
+
 private:
   /**
    * @brief Loads age distribution data from YAML configuration
@@ -315,6 +356,12 @@ private:
 
   // Initialize array with nullptr
   std::array<std::unique_ptr<AscFile>, SpatialFileType::Count> data{};
+
+  // Map of admin level names to their corresponding raster paths
+  std::map<std::string, std::string> admin_rasters;
+
+  // Helper method to parse administrative boundaries from YAML
+  void load_admin_boundaries(const YAML::Node &node);
 };
 
 #endif

@@ -93,6 +93,14 @@ const std::vector<int>& AdminLevelManager::get_locations_in_unit(const std::stri
     return boundary.unit_to_locations[unit_id];
 }
 
+const std::pair<int,int> AdminLevelManager::get_units(const std::string& level_name) const {
+    auto it = name_to_id.find(level_name);
+    if (it == name_to_id.end()) {
+        throw std::runtime_error("Administrative level '" + level_name + "' not found");
+    }
+    return {boundaries[it->second].min_unit_id, boundaries[it->second].max_unit_id};
+}
+
 const BoundaryData* AdminLevelManager::get_boundary(
     const std::string& name) const {
     auto it = name_to_id.find(name);
@@ -105,29 +113,6 @@ int AdminLevelManager::get_unit_count(const std::string& level_name) const {
         throw std::runtime_error("Administrative level '" + level_name + "' not found");
     }
     return boundaries[it->second].unit_count;
-}
-
-void AdminLevelManager::validate() const {
-    // Check if district level is configured when admin boundaries are used
-    if (!id_to_name.empty() && !has_district_) {
-        throw std::runtime_error("Administrative boundaries configured but missing required 'district' level");
-    }
-
-    // Validate each boundary in id_to_name
-    for (int i = 0; i < id_to_name.size(); i++) {
-        if (boundaries[i].unit_count == 0) {
-            throw std::runtime_error("Administrative level '" + id_to_name[i] + "' has no units");
-        }
-    }
-
-    // Check if all boundaries have the same dimensions
-    if (boundaries.size() > 1) {
-        for (int i = 1; i < boundaries.size(); i++) {
-            if (boundaries[i].unit_count != boundaries[0].unit_count) {
-                throw std::runtime_error("All boundaries must have the same dimensions.");
-            }
-        }
-    }
 }
 
 BoundaryData AdminLevelManager::populate_lookup(const AscFile* raster) {
@@ -190,4 +175,35 @@ void AdminLevelManager::validate_raster(const AscFile* raster) const {
     }
     // TODO: check if the raster is a valid admin level raster
 
+}
+
+void AdminLevelManager::validate() const {
+    // Check if district level is configured when admin boundaries are used
+    if (!id_to_name.empty() && !has_district_) {
+        throw std::runtime_error("Administrative boundaries configured but missing required 'district' level");
+    }
+
+    // Validate each boundary in id_to_name
+    for (int i = 0; i < id_to_name.size(); i++) {
+        if (boundaries[i].unit_count == 0) {
+            throw std::runtime_error("Administrative level '" + id_to_name[i] + "' has no units");
+        }
+    }
+
+
+    // all admin levels must have the same dimensions for location_to_unit
+    for (int i = 0; i < boundaries.size(); i++) {
+        if (boundaries[i].location_to_unit.size() != boundaries[0].location_to_unit.size()) {
+            throw std::runtime_error("All admin levels must have the same dimensions for location_to_unit");
+        }
+        // each unit_to_locations must have the size of max_unit_id + 1
+        if (boundaries[i].unit_to_locations.size() != boundaries[i].max_unit_id + 1) {
+            throw std::runtime_error("unit_to_locations must have the size of max_unit_id + 1");
+        }
+
+        // each unit_count should be max_unit_id - min_unit_id + 1
+        if (boundaries[i].unit_count != boundaries[i].max_unit_id - boundaries[i].min_unit_id + 1) {
+            throw std::runtime_error("unit_count should be max_unit_id - min_unit_id + 1");
+        }
+    }
 }

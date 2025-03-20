@@ -9,7 +9,6 @@ TEST_CASE_METHOD(BasicOperationsTest, "Basic Registration Operations", "[AdminLe
     SECTION("Register new administrative level") {
         REQUIRE_NOTHROW(manager.register_level("district"));
         REQUIRE(manager.has_level("district"));
-        REQUIRE(manager.has_district());
     }
 
     SECTION("Register multiple levels") {
@@ -54,7 +53,6 @@ TEST_CASE_METHOD(BasicOperationsTest, "Basic Boundary Setup", "[AdminLevel][Basi
         int district_id = manager.register_level("district");
         REQUIRE(district_id == 0);  // First registration should have ID 0
         REQUIRE(manager.has_level("district"));
-        REQUIRE(manager.has_district());
 
         // Load and verify raster before moving
         auto raster = std::unique_ptr<AscFile>(AscFileManager::read("test_district.asc"));

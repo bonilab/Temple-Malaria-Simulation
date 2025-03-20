@@ -100,12 +100,6 @@ public:
     }
 
     /**
-     * @brief Check if district level is configured
-     * @return true if district level exists, false otherwise
-     */
-    bool has_district() const { return has_district_; }
-
-    /**
      * @brief Register a new administrative level
      * @param name The name of the administrative level
      * @return The ID assigned to this level
@@ -159,13 +153,15 @@ public:
      * @brief Get all available administrative level names
      * @return Vector of level names
      */
-    std::vector<std::string> get_level_names() const { return id_to_name; }
+    const std::vector<std::string>& get_level_names() const { return id_to_name; }
 
     /**
      * @brief Validate the configuration
      * @throws std::runtime_error if validation fails
      */
     void validate() const;
+
+    const std::pair<int,int> get_units(const std::string& level_name) const;
 
 private:
 

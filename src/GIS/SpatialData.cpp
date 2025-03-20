@@ -325,6 +325,11 @@ void SpatialData::load_files(const YAML::Node &node) {
     using_raster = true;
   }
 
+  // Add support for the new administrative_boundaries section
+  if (node[ADMIN_BOUNDARIES]) {
+    load_admin_boundaries(node);
+  }
+
   // Check to make sure our data is OK
   std::string errors;
   if (check_catalog(errors)) {
@@ -332,6 +337,29 @@ void SpatialData::load_files(const YAML::Node &node) {
   }
 }
 
+void SpatialData::load_admin_boundaries(const YAML::Node &node) {
+  if (!node[ADMIN_BOUNDARIES].IsSequence()) {
+    throw std::runtime_error("administrative_boundaries must be a sequence");
+  }
+  
+  admin_rasters.clear();
+  
+  // Process each administrative boundary
+  for (const auto& admin_level : node[ADMIN_BOUNDARIES]) {
+    if (!admin_level["name"] || !admin_level["raster"]) {
+      throw std::runtime_error("Each administrative level must have a name and raster path");
+    }
+    
+    std::string level_name = admin_level["name"].as<std::string>();
+    std::string raster_path = admin_level["raster"].as<std::string>();
+    
+    // Store for processing later
+    admin_rasters[level_name] = raster_path;
+    LOG(INFO) << "Found admin level: " << level_name << " with raster: " << raster_path;
+  }
+  
+  using_raster = true;
+}
 
 void SpatialData::load_age_distribution(const YAML::Node &node) {
   if (!node["age_distribution_by_location"]) {
@@ -432,32 +460,43 @@ void SpatialData::load_location_data(const YAML::Node &node) {
 }
 
 void SpatialData::initialize_admin_boundaries() {
-    // simply create a new AdminLevelManager, the old one will be deleted
+    // Create a new AdminLevelManager
     admin_manager_ = std::make_unique<AdminLevelManager>();
-    // Set up district level if district raster exists (for backward compatibility)
-    if (data[SpatialFileType::Districts]) {
-        if (!admin_manager_->has_level("district")) {
-            try {
-                admin_manager_->register_level("district");
-                // Move ownership of the district raster to AdminLevelManager
-                admin_manager_->setup_boundary("district", data[SpatialFileType::Districts].get());
-            } catch (const std::exception& e) {
-                LOG(ERROR) << "Failed to initialize district level: " << e.what();
-                throw;
-            }
+    
+    if (!using_raster) {
+      return;
+    }
+    if (admin_rasters.empty()) {
+      // there will be cases where we don't need to have any admin levels
+      return;
+    }
+    
+    // Now process all other admin levels
+    for (const auto& [level_name, raster_path] : admin_rasters) {
+        try {
+            admin_manager_->register_level(level_name);
+            
+            // Load the raster
+            auto raster = std::unique_ptr<AscFile>(AscFileManager::read(raster_path));
+            admin_manager_->setup_boundary(level_name, raster.get());
+            
+            LOG(INFO) << "Initialized admin level: " << level_name;
+        } catch (const std::exception& e) {
+            LOG(ERROR) << "Failed to initialize admin level " << level_name << ": " << e.what();
+            throw;
         }
     }
-
+    
     // Validate the configuration
     try {
         admin_manager_->validate();
     } catch (const std::exception& e) {
         LOG(ERROR) << "AdminLevelManager validation failed: " << e.what();
-        throw;
+        throw std::runtime_error(e.what());
     }
 
     LOG(INFO) << "Administrative boundaries initialized successfully";
-}
+} 
 
 void SpatialData::parse_complete() {
   // Simply reset unique_ptrs instead of manual delete
@@ -471,6 +510,10 @@ void SpatialData::parse_complete() {
   data[SpatialFileType::Population].reset();
   data[SpatialFileType::PrTreatmentUnder5].reset();
   data[SpatialFileType::PrTreatmentOver5].reset();
-   // Note: Districts raster ownership has been transferred to AdminLevelManager
-    // so we don't need to reset it here
+  
+  // Note: We don't reset Districts raster as ownership might have been transferred
+  // Similarly, we don't need to reset any admin rasters as they are stored in custom objects
+  
+  // Clean up the temporary admin rasters map as it's no longer needed
+  admin_rasters.clear();
 }

@@ -221,6 +221,10 @@ public:
     return admin_manager_->get_admin_level_id(level_name);
   }
 
+  const std::string& get_admin_level_name(int level_id) const {
+    return admin_manager_->get_level_names()[level_id];
+  }
+
   /**
    * @brief Returns locations in the specified administrative unit
    * @param unit_id The administrative unit ID

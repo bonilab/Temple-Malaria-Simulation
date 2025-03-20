@@ -10,8 +10,7 @@
 #include "MMCReporter.h"
 #include "Model.h"
 #include "MonthlyReporter.h"
-#include "Reporters/SQLitePixelReporter.h"
-#include "SQLiteDistrictReporter.h"
+#include "SQLiteMonthlyReporter.h"
 #include "Specialist/AgeBandReporter.h"
 #include "Specialist/CellularReporter.h"
 #include "Specialist/NullReporter.hxx"
@@ -31,8 +30,7 @@ std::map<std::string, Reporter::ReportType> Reporter::ReportTypeMap{
     {"CellularReporter", CELLULAR_REPORTER},
     {"SeasonalImmunity", SEASONAL_IMMUNITY},
     {"AgeBand", AGE_BAND_REPORTER},
-    {"SQLiteDistrictReporter", SQLITE_DISTRICT_REPORTER},
-    {"SQLitePixelReporter", SQLITE_PIXEL_REPORTER},
+    {"SQLiteMonthlyReporter", SQLITE_MONTHLY_REPORTER},
 #ifdef ENABLE_TRAVEL_TRACKING
     {"TravelTrackingReporter", TRAVEL_TRACKING_REPORTER},
 #endif
@@ -54,10 +52,12 @@ Reporter* Reporter::MakeReport(ReportType report_type) {
       return new SeasonalImmunity();
     case AGE_BAND_REPORTER:
       return new AgeBandReporter();
-    case SQLITE_DISTRICT_REPORTER:
-      return new SQLiteDistrictReporter();
-    case SQLITE_PIXEL_REPORTER:
-      return new SQLitePixelReporter();
+    // case SQLITE_DISTRICT_REPORTER:
+    //   return new SQLiteDistrictReporter();
+    // case SQLITE_PIXEL_REPORTER:
+    //   return new SQLitePixelReporter();
+    case SQLITE_MONTHLY_REPORTER:
+      return new SQLiteMonthlyReporter();
 #ifdef ENABLE_TRAVEL_TRACKING
     case TRAVEL_TRACKING_REPORTER:
       return new TravelTrackingReporter();

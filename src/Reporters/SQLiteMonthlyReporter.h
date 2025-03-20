@@ -1,4 +1,3 @@
-
 /*
  * SQLiteMonthlyReporter.h
  *
@@ -23,7 +22,7 @@ protected:
     std::vector<double> eir, pfpr_under5, pfpr2to10, pfpr_all;
     std::vector<int> population, clinical_episodes, treatments,
         treatment_failures, nontreatment, treatments_under5, treatments_over5,
-        infections_by_district;
+        infections_by_unit;
     std::vector<std::vector<int>> clinical_episodes_by_age_class;
   };
 
@@ -35,20 +34,20 @@ protected:
     std::vector<std::vector<double>> weighted_occurrences;
   };
 
-  MonthlySiteData monthly_site_data;
-  MonthlyGenomeData monthly_genome_data;
+  std::vector<MonthlySiteData> monthly_site_data_by_level;
+  std::vector<MonthlyGenomeData> monthly_genome_data_by_level;
 
   std::vector<std::string> insert_values;
 
 private:
-  void reset_site_data_structures(int vectorSize, size_t numAgeClasses);
-  void reset_genome_data_structures(int vectorSize, size_t numGenotypes);
-  void count_infections_for_location(int location);
-  void collect_site_data_for_location(int location);
-  void calculate_and_build_up_site_data_insert_values(int monthId);
-  void collect_genome_data_for_location(size_t location);
-  void collect_genome_data_for_a_person(Person* person, int site);
-  void build_up_genome_data_insert_values(int monthId);
+  void reset_site_data_structures(int level_id, int vectorSize, size_t numAgeClasses);
+  void reset_genome_data_structures(int level_id, int vectorSize, size_t numGenotypes);
+  void count_infections_for_location(int location, int level_id);
+  void collect_site_data_for_location(int location, int level_id);
+  void calculate_and_build_up_site_data_insert_values(int monthId, int level_id);
+  void collect_genome_data_for_location(size_t location, int level_id);
+  void collect_genome_data_for_a_person(Person* person, int unit_id, int level_id);
+  void build_up_genome_data_insert_values(int monthId, int level_id);
 
 public:
   SQLiteMonthlyReporter() = default;

@@ -1,4 +1,3 @@
-
 /*
  * SQLiteDbReporter.h
  *
@@ -35,6 +34,21 @@ private:
   // initialized)
   std::string insert_site_query_prefix_;
 
+  // Generate table name for admin level
+  std::string get_site_table_name(int level_id) const;
+  
+  std::string get_genome_table_name(int level_id) const;
+  
+  // Vector to store dynamically generated query prefixes for each admin level
+  std::vector<std::string> insert_site_query_prefixes_;
+  std::vector<std::string> insert_genome_query_prefixes_;
+  
+  // Method to create tables for all admin levels
+  void create_admin_level_tables();
+  
+  // Method to generate insert query prefixes for all admin levels
+  void generate_insert_query_prefixes();
+
 protected:
   std::unique_ptr<SQLiteDatabase> db;
 
@@ -45,8 +59,12 @@ protected:
   virtual void monthly_report_genome_data(int monthId) = 0;
   virtual void monthly_report_site_data(int monthId) = 0;
 
-  void insert_monthly_site_data(const std::vector<std::string> &siteData);
-  void insert_monthly_genome_data(const std::vector<std::string> &genomeData);
+  // Modify insert methods to take admin level ID as parameter
+  void insert_monthly_site_data(int level_id, const std::vector<std::string> &siteData);
+  void insert_monthly_genome_data(int level_id, const std::vector<std::string> &genomeData);
+  
+  // Get number of admin levels
+  int get_admin_level_count() const;
 
 public:
   // Constructor and destructor

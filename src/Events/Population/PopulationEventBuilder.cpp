@@ -643,7 +643,8 @@ std::vector<Event*> PopulationEventBuilder::build(const YAML::Node &node,
     events = build_importation_periodically_random_event(node["info"], config);
   }
   if (name == IntroduceMutantEvent::EventName) {
-    events = build_introduce_mutant_event(node["info"], config);
+    auto admin_level_name = node["admin_level"].as<std::string>();
+    events = build_introduce_mutant_event(node["info"], config, admin_level_name);
   }
   if (name == IntroduceMutantRasterEvent::EventName) {
     events = build_introduce_mutant_raster_event(node["info"], config);

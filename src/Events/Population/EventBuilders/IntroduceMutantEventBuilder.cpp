@@ -68,7 +68,7 @@ std::vector<int> get_locations_from_raster(const std::string &filename) {
 }
 
 std::vector<Event*> PopulationEventBuilder::build_introduce_mutant_event(
-    const YAML::Node &node, Config* config) {
+    const YAML::Node &node, Config* config, const std::string& admin_level_name) {
   try {
     std::vector<Event*> events;
     for (const auto &entry : node) {
@@ -77,23 +77,30 @@ std::vector<Event*> PopulationEventBuilder::build_introduce_mutant_event(
       auto time =
           (date::sys_days{start_date} - date::sys_days{config->starting_date()})
               .count();
-      auto district = entry["district"].as<int>();
+      auto unit_id = entry["unit_id"].as<int>();
       auto fraction = entry["fraction"].as<double>();
       auto locus = entry["locus"].as<int>();
       auto mutant_allele = entry["mutant_allele"].as<int>();
 
-      // Make sure the district GIS data is loaded and the district id makes
+      auto admin_level_id = SpatialData::get_instance().get_admin_level_id(admin_level_name);
+      // Make sure the GIS data is loaded and the unit id makes
       // sense
-      if (district < 0) {
+      if (unit_id < 0) {
         LOG(ERROR)
-            << "The target district must be greater than or equal to zero.";
+            << "The target unit id must be greater than or equal to zero.";
         throw std::invalid_argument(
-            "Target district must be greater than or equal to zero");
+            "Target unit id must be greater than or equal to zero");
       }
-      if (district > SpatialData::get_instance().get_unit_count("district")) {
-        LOG(ERROR) << "Target district is greater than the district count.";
+
+      if (SpatialData::get_instance().get_admin_levels().size() == 0) {
+        LOG(ERROR) << "No admin levels found.";
+        throw std::invalid_argument("No admin levels found.");
+      }
+
+      if (unit_id > SpatialData::get_instance().get_unit_count(admin_level_id)) {
+        LOG(ERROR) << "Target unit id is greater than the unit count.";
         throw std::invalid_argument(
-            "Target district greater than district count.");
+            "Target unit id greater than unit count.");
       }
 
       // Make sure the fraction makes sense
@@ -116,10 +123,10 @@ std::vector<Event*> PopulationEventBuilder::build_introduce_mutant_event(
       }
 
       // Log and add the event to the queue
-      auto* event = new IntroduceMutantEvent(time, district, fraction, locus,
-                                             mutant_allele);
+      auto* event = new IntroduceMutantEvent(time, unit_id, fraction, locus,
+                                             mutant_allele, admin_level_id);
       VLOG(1) << "Adding " << event->name() << " start: " << start_date
-              << ", district: " << district << ", locus: " << locus
+              << ", unit_id: " << unit_id << ", locus: " << locus
               << ", mutant_allele: " << mutant_allele
               << ", fraction: " << fraction;
       events.push_back(event);

@@ -49,7 +49,7 @@ struct BoundaryData {
  * AdminLevelManager manager;
  * 
  * // Register and set up administrative levels
- * manager.register_level("district", "Health districts");
+ * manager.register_level("district");
  * manager.setup_boundary("district", district_raster);
  * 
  * // Query administrative units
@@ -60,7 +60,7 @@ struct BoundaryData {
  * Configuration format:
  * @code
  * administrative_boundaries:
- *   - name: "district"    # Mandatory for backward compatibility
+ *   - name: "district" # first level
  *     raster: "path/to/district.asc"
  *     description: "Health districts"
  *   - name: "province"    # Optional additional levels
@@ -145,6 +145,15 @@ public:
     const std::vector<int>& get_locations_in_unit(const std::string& level_name, int unit_id) const;
 
     /**
+     * @brief Get all locations in an administrative unit
+     * @param level_id The ID of the administrative level
+     * @param unit_id The admin unit ID
+     * @return Const reference to vector of location IDs
+     * @throws std::runtime_error if level doesn't exist
+     */
+    const std::vector<int>& get_locations_in_unit(int level_id, int unit_id) const;
+
+    /**
      * @brief Get boundary data for an administrative level
      * @param name The name of the administrative level
      * @return Pointer to boundary data, nullptr if not found
@@ -179,9 +188,7 @@ public:
      * @return The ID of the administrative level
      * @throws std::runtime_error if level doesn't exist
      */
-    int get_admin_level_id(const std::string& level_name) const {
-        return name_to_id.at(level_name);
-    }
+    int get_admin_level_id(const std::string& level_name) const;
 
 
     /**

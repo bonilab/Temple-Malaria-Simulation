@@ -236,6 +236,11 @@ public:
     return admin_manager_->get_locations_in_unit(level_name, unit_id);
   }
 
+  const std::vector<int>& get_locations_in_unit(int level_id, int unit_id) const {
+    return admin_manager_->get_locations_in_unit(level_id, unit_id);
+  }
+
+
   /**
    * @brief Returns the number of units in the specified administrative level
    * @param level_id The administrative level ID
@@ -327,7 +332,7 @@ public:
   /**
    * @brief Gets all units in an administrative level
    * @param level_name The administrative level name
-   * @return Vector of unit IDs for the requested level
+   * @return Pair of min and max unit IDs for the requested level
    * @throws std::runtime_error if admin level does not exist
    */
   const std::pair<int,int> get_admin_units(const std::string& level_name) const {

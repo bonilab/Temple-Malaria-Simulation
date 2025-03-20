@@ -78,9 +78,9 @@ Version 4.2.0 introduces flexible multi-administrative boundaries support, allow
 ### Configuration Format
 ```yaml
 administrative_boundaries:
-  - name: "district"    # Mandatory for backward compatibility
+  - name: "district"    # First admin level
     raster: "path/to/district.asc"
-  - name: "province"    # Optional additional levels
+  - name: "province"    # Second additional level
     raster: "path/to/province.asc"
   - name: "region"      # Can add as many levels as needed
     raster: "path/to/region.asc"
@@ -241,3 +241,27 @@ admin_unit_id,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec
    - Consistent API across all spatial components
    - Full backward compatibility with district-based seasonal patterns
    - Support for both 0-based and 1-based admin unit IDs
+
+### Integration with IntroduceMutantEvent
+
+The IntroduceMutantEvent system has been updated to support the multi-administrative boundary system:
+
+1. YAML Configuration Format:
+```yaml
+# Introduce the 469Y mutant
+- name: introduce_mutant_event
+  admin_level: "district"  # Can be any registered level: "district", "province", etc.
+  info:
+    - day: 2006/6/3
+      unit_id: 73
+      fraction: 0.05339234151348579
+      locus: 2
+      mutant_allele: 1
+```
+
+2. Benefits:
+   - Mutant introductions can be targeted to any administrative level
+   - Full backward compatibility with district-based introductions
+   - Support for both 0-based and 1-based admin unit IDs
+   - Consistent API across all spatial components
+   - Same mutation behavior, just with more flexible targeting options

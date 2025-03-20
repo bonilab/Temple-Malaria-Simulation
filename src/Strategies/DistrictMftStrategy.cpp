@@ -18,6 +18,9 @@
 // TODO : fix for 0-1 based indexing
 DistrictMftStrategy::DistrictMftStrategy()
     : IStrategy("DistrictMFT", StrategyType::DistrictMftStrategy) {
+
+  LOG(WARNING) << "The use of 'district' is deprecated. Please use the new multi-administrative boundary system.";
+
   // Size the map to accommodate either 0-based or 1-based district IDs
   // Pre-populate map with nullptr entries for all possible district IDs
   auto vectorSize = SpatialData::get_instance().get_boundary("district")->max_unit_id + 1;

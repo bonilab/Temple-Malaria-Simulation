@@ -89,6 +89,8 @@ public:
     // Note the population size
     auto population = v_number_of_residents_by_location[from_location];
 
+    LOG(WARNING) << "The use of 'district' is deprecated. Please use the new multi-administrative boundary system.";
+
     // Note the source district
     auto source_district =
         SpatialData::get_instance().get_admin_unit("district", from_location);

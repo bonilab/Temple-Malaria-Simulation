@@ -237,6 +237,7 @@ IStrategy* StrategyBuilder::buildDistrictMftStrategy(const YAML::Node &node,
   // them once
   std::vector<int> districts;
 
+  LOG(WARNING) << "The use of 'district' is deprecated. Please use the new multi-administrative boundary system.";
   // Get district ID range from SpatialData
   const auto& spatial_data = SpatialData::get_instance();
   const auto min_district_id = spatial_data.get_boundary("district")->min_unit_id;

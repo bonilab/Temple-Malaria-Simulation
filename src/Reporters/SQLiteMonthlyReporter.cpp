@@ -16,11 +16,6 @@ void SQLiteMonthlyReporter::initialize(int jobNumber,
                                         const std::string &path) {
   // Inform the user of the reporter type and make sure there are districts
   VLOG(1) << "Using SQLiteDbReporter with aggregation at multiple admin levels.";
-  if (SpatialData::get_instance().get_unit_count("district") <= 0) {
-    LOG(ERROR) << "District raster must be present when aggregating data at "
-                  "the admin level.";
-    throw std::invalid_argument("No district raster present");
-  }
 
   SQLiteDbReporter::initialize(jobNumber, path);
 

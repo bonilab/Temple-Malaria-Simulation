@@ -461,7 +461,7 @@ void SpatialData::load_location_data(const YAML::Node &node) {
 
 void SpatialData::initialize_admin_boundaries() {
     // Create a new AdminLevelManager
-    admin_manager_ = std::make_unique<AdminLevelManager>();
+    admin_manager_.reset(new AdminLevelManager());
     
     if (!using_raster) {
       return;

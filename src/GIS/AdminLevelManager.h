@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <vector>
 #include "Core/PropertyMacro.h"
 #include "AscFile.h"
@@ -74,14 +74,12 @@ class AdminLevelManager {
 private:
 
     // Efficient lookup storage
-    std::unordered_map<std::string, int> name_to_id;  ///< Maps admin level names to internal admin IDs
-    std::vector<std::string> id_to_name;              ///< Maps internal IDs to admin level names
-    std::vector<BoundaryData> boundaries;             ///< Stores boundary data for each admin level
+    std::map<std::string, int> name_to_id{};  ///< Maps admin level names to internal admin IDs
+    std::vector<std::string> id_to_name{};              ///< Maps internal IDs to admin level names
+    std::vector<BoundaryData> boundaries{};             ///< Stores boundary data for each admin level
     
-    bool has_district_{false};  ///< Tracks if mandatory district level is configured
-
 public:
-    AdminLevelManager() = default;
+    AdminLevelManager(): name_to_id{}, id_to_name{}, boundaries{} {}
     ~AdminLevelManager() = default;
 
     // Delete copy and move to ensure singleton-like behavior
@@ -89,6 +87,8 @@ public:
     AdminLevelManager& operator=(const AdminLevelManager&) = delete;
     AdminLevelManager(AdminLevelManager&&) = delete;
     AdminLevelManager& operator=(AdminLevelManager&&) = delete;
+
+    void set_boundary(int level_id, const BoundaryData& boundary);
 
     /**
      * @brief Check if a specific administrative level exists
@@ -125,6 +125,16 @@ public:
      */
     int get_admin_unit(const std::string& level_name, int location) const;
 
+    /** 
+     * @brief Get the admin unit ID for a location
+     * @param level_id The ID of the administrative level
+     * @param location The location ID
+     * @return The admin unit ID
+     * @throws std::runtime_error if level doesn't exist
+     * @throws std::out_of_range if location is invalid
+     */
+    int get_admin_unit(int level_id, int location) const;
+
     /**
      * @brief Get all locations in an administrative unit
      * @param level_name The name of the administrative level
@@ -150,10 +160,29 @@ public:
     int get_unit_count(const std::string& level_name) const;
 
     /**
+     * @brief Get the number of units in an administrative level
+     * @param level_id The ID of the administrative level
+     * @return The number of units
+     * @throws std::runtime_error if level doesn't exist
+     */
+    int get_unit_count(int level_id) const;
+
+    /**
      * @brief Get all available administrative level names
      * @return Vector of level names
      */
     const std::vector<std::string>& get_level_names() const { return id_to_name; }
+
+    /**
+     * @brief Get the ID of an administrative level
+     * @param level_name The name of the administrative level
+     * @return The ID of the administrative level
+     * @throws std::runtime_error if level doesn't exist
+     */
+    int get_admin_level_id(const std::string& level_name) const {
+        return name_to_id.at(level_name);
+    }
+
 
     /**
      * @brief Validate the configuration

@@ -1,6 +1,7 @@
 #include "Environment/SeasonalPattern.h"
 #include "Helpers/TimeHelpers.h"
 #include "SeasonalPatternFixture.h"
+#include "GIS/SpatialData.h"
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <yaml-cpp/yaml.h>
@@ -12,15 +13,28 @@ using Catch::Matchers::WithinRel;
 // Test helper class that overrides district mapping
 class TestSeasonalPattern : public SeasonalPattern {
 public:
-    static TestSeasonalPattern* build(const YAML::Node &node) {
+    static TestSeasonalPattern* build(const YAML::Node &node, SpatialData* spatial_data) {
         auto value = new TestSeasonalPattern();
-        value->initialize(node);
+        value->initialize(node, spatial_data);
         return value;
     }
 
+    static SpatialData* create_fake_spatial_data() {
+        std::cout << "Creating fake spatial data" << std::endl;
+        auto fake_spatial_data = new SpatialData();
+        fake_spatial_data->get_admin_level_manager()->register_level("district");
+        auto boundary = BoundaryData();
+        boundary.location_to_unit = {1, 2};
+        boundary.unit_to_locations = {{1, {1}}, {2, {2}}};
+        boundary.min_unit_id = 1;
+        boundary.max_unit_id = 2;
+        boundary.unit_count = 2;
+        fake_spatial_data->get_admin_level_manager()->set_boundary(0, boundary);
+        return fake_spatial_data;
+    }
 protected:
     // Override district mapping for testing
-    int get_district_for_location(int location) const override {
+    int get_admin_unit_for_location(int location) const override {
         if (location == 999){
             throw std::out_of_range("Location is out of range");
         }
@@ -41,11 +55,13 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
           enable: true
           mode: "PATTERN"
           pattern:
+            admin_level: "district"
             filename: "{}"
             period: 12
         )", monthly_file));
 
-        auto pattern = TestSeasonalPattern::build(node);
+        auto fake_spatial_data = std::unique_ptr<SpatialData>(TestSeasonalPattern::create_fake_spatial_data());
+        auto pattern = TestSeasonalPattern::build(node, fake_spatial_data.get());
         REQUIRE(pattern != nullptr);
         REQUIRE(pattern->get_is_monthly());
         REQUIRE(pattern->get_period() == 12);
@@ -56,11 +72,13 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
           enable: true
           mode: "PATTERN"
           pattern:
+            admin_level: "district"
             filename: "{}"
             period: 365
         )", daily_file));
 
-        auto pattern = TestSeasonalPattern::build(node);
+        auto fake_spatial_data = std::unique_ptr<SpatialData>(TestSeasonalPattern::create_fake_spatial_data());
+        auto pattern = TestSeasonalPattern::build(node, fake_spatial_data.get());
         REQUIRE(pattern != nullptr);
         REQUIRE(!pattern->get_is_monthly());
         REQUIRE(pattern->get_period() == 365);
@@ -71,11 +89,13 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
           enable: true
           mode: "PATTERN"
           pattern:
+            admin_level: "district"
             filename: "{}"
             period: 100
         )", "test_pattern.csv"));
 
-        REQUIRE_THROWS_AS(TestSeasonalPattern::build(node), std::invalid_argument);
+        auto fake_spatial_data = std::unique_ptr<SpatialData>(TestSeasonalPattern::create_fake_spatial_data());
+        REQUIRE_THROWS_AS(TestSeasonalPattern::build(node, fake_spatial_data.get()), std::invalid_argument);
     }
 
     SECTION("Can read monthly pattern data") {
@@ -83,11 +103,13 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
           enable: true
           mode: "PATTERN"
           pattern:
+            admin_level: "district"
             filename: "{}"
             period: 12
         )", monthly_file));
 
-        auto pattern = TestSeasonalPattern::build(node);
+        auto fake_spatial_data = std::unique_ptr<SpatialData>(TestSeasonalPattern::create_fake_spatial_data());
+        auto pattern = TestSeasonalPattern::build(node, fake_spatial_data.get());
         REQUIRE(pattern != nullptr);
         
         // Test pattern values for location 1
@@ -106,11 +128,13 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
           enable: true
           mode: "PATTERN"
           pattern:
+            admin_level: "district"
             filename: "{}"
             period: 365
         )", daily_file));
 
-        auto pattern = TestSeasonalPattern::build(node);
+        auto fake_spatial_data = std::unique_ptr<SpatialData>(TestSeasonalPattern::create_fake_spatial_data());
+        auto pattern = TestSeasonalPattern::build(node, fake_spatial_data.get());
         REQUIRE(pattern != nullptr);
         
         // Test pattern values
@@ -124,11 +148,13 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
           enable: true
           mode: "PATTERN"
           pattern:
+            admin_level: "district"
             filename: "{}"
             period: 365
         )", daily_file));
 
-        auto pattern = TestSeasonalPattern::build(node);
+        auto fake_spatial_data = std::unique_ptr<SpatialData>(TestSeasonalPattern::create_fake_spatial_data());
+        auto pattern = TestSeasonalPattern::build(node, fake_spatial_data.get());
         
         // Dec 30th (day 365) in leap year should use same value as Dec 31st (day 366)
         auto dec30 = make_date(2000, 12, 30);
@@ -142,11 +168,13 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
           enable: true
           mode: "PATTERN"
           pattern:
+            admin_level: "district"
             filename: "{}"
             period: 12
         )", monthly_file));
 
-        auto pattern = TestSeasonalPattern::build(node);
+        auto fake_spatial_data = std::unique_ptr<SpatialData>(TestSeasonalPattern::create_fake_spatial_data());
+        auto pattern = TestSeasonalPattern::build(node, fake_spatial_data.get());
         
         // Try to access non-existent district
         REQUIRE_THROWS_AS(pattern->get_seasonal_factor(make_date(2000, 1, 1), 999), 
@@ -164,11 +192,13 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
           enable: true
           mode: "PATTERN"
           pattern:
+            admin_level: "district"
             filename: "test_bad_pattern.csv"
             period: 12
         )");
 
-        REQUIRE_THROWS(TestSeasonalPattern::build(node));
+        auto fake_spatial_data = std::unique_ptr<SpatialData>(TestSeasonalPattern::create_fake_spatial_data());
+        REQUIRE_THROWS(TestSeasonalPattern::build(node, fake_spatial_data.get()));
         std::remove("test_bad_pattern.csv");
     }
 
@@ -183,11 +213,13 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
           enable: true
           mode: "PATTERN"
           pattern:
+            admin_level: "district"
             filename: "test_negative_pattern.csv"
             period: 12
         )");
 
-        REQUIRE_THROWS_AS(TestSeasonalPattern::build(node), std::runtime_error);
+        auto fake_spatial_data = std::unique_ptr<SpatialData>(TestSeasonalPattern::create_fake_spatial_data());
+        REQUIRE_THROWS_AS(TestSeasonalPattern::build(node, fake_spatial_data.get()), std::runtime_error);
         std::remove("test_negative_pattern.csv");
     }
 
@@ -196,11 +228,13 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
           enable: true
           mode: "PATTERN"
           pattern:
+            admin_level: "district"
             filename: "non_existent_file.csv"
             period: 12
         )");
 
-        REQUIRE_THROWS(TestSeasonalPattern::build(node));
+        auto fake_spatial_data = std::unique_ptr<SpatialData>(TestSeasonalPattern::create_fake_spatial_data());
+        REQUIRE_THROWS(TestSeasonalPattern::build(node, fake_spatial_data.get()));
     }
 
     SECTION("Validates monthly data expansion") {
@@ -208,11 +242,13 @@ TEST_CASE_METHOD(SeasonalPatternFixture, "SeasonalPattern", "[Environment]") {
           enable: true
           mode: "PATTERN"
           pattern:
+            admin_level: "district"
             filename: "{}"
             period: 12
         )", monthly_file));
 
-        auto pattern = TestSeasonalPattern::build(node);
+        auto fake_spatial_data = std::unique_ptr<SpatialData>(TestSeasonalPattern::create_fake_spatial_data());
+        auto pattern = TestSeasonalPattern::build(node, fake_spatial_data.get());
         
         // Check February has 28 days
         auto feb1 = make_date(2000, 2, 1);

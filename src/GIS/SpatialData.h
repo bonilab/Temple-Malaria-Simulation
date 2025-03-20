@@ -118,7 +118,7 @@ public:
   bool using_raster = false;
 
   // Add AdminLevelManager as a member
-  std::unique_ptr<AdminLevelManager> admin_manager_;
+  std::unique_ptr<AdminLevelManager> admin_manager_{ new AdminLevelManager()};
 
   // Constructor
   SpatialData();
@@ -189,6 +189,9 @@ public:
   void generate_distances() const;
 
 
+  AdminLevelManager* get_admin_level_manager() const{
+    return admin_manager_.get();
+  }
 
   /**
    * @brief Retrieves the administrative unit ID for a given location
@@ -203,6 +206,22 @@ public:
   }
 
   /**
+   * @brief Retrieves the administrative unit ID for a given location
+   * @param level_id The administrative level ID
+   * @param location The location ID
+   * @return The administrative unit ID for the given location
+   * @throws std::out_of_range if location is invalid
+   * @throws std::runtime_error if admin level is not initialized
+   */
+  int get_admin_unit(int level_id, int location) const {
+    return admin_manager_->get_admin_unit(level_id, location);
+  }
+
+  int get_admin_level_id(const std::string& level_name) const {
+    return admin_manager_->get_admin_level_id(level_name);
+  }
+
+  /**
    * @brief Returns locations in the specified administrative unit
    * @param unit_id The administrative unit ID
    * @param level_name The administrative level name (e.g., "district")
@@ -213,6 +232,22 @@ public:
     return admin_manager_->get_locations_in_unit(level_name, unit_id);
   }
 
+  /**
+   * @brief Returns the number of units in the specified administrative level
+   * @param level_id The administrative level ID
+   * @return The number of units in the administrative level
+   * @throws std::runtime_error if admin level is not initialized
+   */
+  int get_unit_count(int level_id) const {
+    return admin_manager_->get_unit_count(level_id);
+  }
+
+  /**
+   * @brief Returns the number of units in the specified administrative level
+   * @param level_name The administrative level name (e.g., "district")
+   * @return The number of units in the administrative level
+   * @throws std::runtime_error if admin level is not initialized
+   */
   int get_unit_count(const std::string& level_name) const {
     if (admin_manager_ == nullptr) {
       return -1;

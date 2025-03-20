@@ -163,3 +163,30 @@ if (spatial_data.has_admin_level("province")) {
 This new API provides a consistent interface for working with any administrative level while maintaining backward compatibility through the "district" level name.
 
 _All features have been implemented and extensively tested. The API is now stable for production use._
+
+### Integration with Seasonal Patterns
+
+The SeasonalPattern system has been updated to work with the multi-administrative boundary system:
+
+1. Configuration:
+```yaml
+seasonal_pattern:
+  pattern:
+    admin_level: "district"  # Can be any registered level: "district", "province", etc.
+    filename: "seasonal_data.csv"
+    period: 12  # 12 for monthly, 365 for daily
+```
+
+2. CSV File Format:
+
+```csv
+admin_unit_id,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec
+1,0.8,1.0,1.2,1.5,1.8,2.0,1.8,1.5,1.2,1.0,0.8,0.7
+2,0.7,0.8,1.0,1.2,1.5,1.8,2.0,1.8,1.5,1.2,1.0,0.8
+```
+
+3. Benefits:
+   - Seasonal patterns can now be defined at any administrative level
+   - Consistent API across all spatial components
+   - Full backward compatibility with district-based seasonal patterns
+   - Support for both 0-based and 1-based admin unit IDs

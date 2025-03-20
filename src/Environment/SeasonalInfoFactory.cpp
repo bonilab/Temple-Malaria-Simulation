@@ -2,6 +2,7 @@
 #include "SeasonalDisabled.h"
 #include "SeasonalEquation.h"
 #include "SeasonalPattern.h"
+#include "GIS/SpatialData.h"
 #include <easylogging++.h>
 #include <fmt/format.h>
 #include <algorithm>
@@ -33,7 +34,7 @@ ISeasonalInfo* SeasonalInfoFactory::build(const YAML::Node &node, Config* config
   }
   if (mode == "PATTERN") {
     LOG(INFO) << "Using pattern-based seasonal information.";
-    return SeasonalPattern::build(node);
+    return SeasonalPattern::build(node, &SpatialData::get_instance());
   }
   throw std::runtime_error(fmt::format("Unknown seasonal mode {}", mode));
 } 

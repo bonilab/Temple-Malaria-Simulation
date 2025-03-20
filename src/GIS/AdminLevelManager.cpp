@@ -16,38 +16,25 @@ int AdminLevelManager::register_level(const std::string& name) {
     id_to_name.push_back(name);
     name_to_id[name] = id;
     boundaries.emplace_back();
-
-    // Track if this is the district level
-    if (name == "district") {
-        has_district_ = true;
-    }
   
     return id;
 }
 
-void AdminLevelManager::setup_boundary(const std::string& name, AscFile* raster) {
-    
-    auto it = name_to_id.find(name);
-    if (it == name_to_id.end()) {
-        throw std::runtime_error("Administrative level '" + name + "' not registered");
-    }
-    // Validate raster
-    if (!raster) {
-        throw std::runtime_error("Null raster provided for '" + name + "'");
+void AdminLevelManager::set_boundary(int level_id, const BoundaryData& in_boundary) {
+    if (level_id < 0 || level_id >= static_cast<int>(boundaries.size())) {
+        throw std::out_of_range("Invalid level ID: " + std::to_string(level_id));
     }
 
-    // Set up boundary data
-    auto& boundary = boundaries[it->second];
 
-    auto result = populate_lookup(raster);
-    
-    boundary.location_to_unit = std::move(result.location_to_unit);
-    boundary.unit_to_locations = std::move(result.unit_to_locations);
-    boundary.min_unit_id = result.min_unit_id;
-    boundary.max_unit_id = result.max_unit_id;
-    boundary.unit_count = result.unit_count;
+    auto& boundary = boundaries[level_id];
+    boundary.location_to_unit = std::move(in_boundary.location_to_unit);
+    boundary.unit_to_locations = std::move(in_boundary.unit_to_locations);
+    boundary.min_unit_id = in_boundary.min_unit_id;
+    boundary.max_unit_id = in_boundary.max_unit_id;
+    boundary.unit_count = in_boundary.unit_count;
 
-    // Validate the boundary data
+    auto name = id_to_name[level_id];
+     // Validate the boundary data
     if (boundary.unit_count == 0) {
         throw std::runtime_error("Administrative level '" + name + "' has no units");
     }
@@ -64,18 +51,41 @@ void AdminLevelManager::setup_boundary(const std::string& name, AscFile* raster)
             << boundary.unit_count << " units";
 }
 
+void AdminLevelManager::setup_boundary(const std::string& name, AscFile* raster) {
+    
+    auto it = name_to_id.find(name);
+    if (it == name_to_id.end()) {
+        throw std::runtime_error("Administrative level '" + name + "' not registered");
+    }
+    // Validate raster
+    if (!raster) {
+        throw std::runtime_error("Null raster provided for '" + name + "'");
+    }
+
+
+    auto result = populate_lookup(raster);
+
+    // Set up boundary data
+    set_boundary(it->second, result);
+}
+
 int AdminLevelManager::get_admin_unit(const std::string& level_name, int location) const {
     auto it = name_to_id.find(level_name);
     if (it == name_to_id.end()) {
         throw std::runtime_error("Administrative level '" + level_name + "' not found");
     }
 
-    const auto& boundary = boundaries[it->second];
-    if (location < 0 || location >= static_cast<int>(boundary.location_to_unit.size())) {
-        throw std::out_of_range("Invalid location index: " + std::to_string(location));
-    }
+    return get_admin_unit(it->second, location);
+}
 
-    return boundary.location_to_unit[location];
+int AdminLevelManager::get_admin_unit(int level_id, int location) const {
+    if (level_id < 0 || level_id >= static_cast<int>(boundaries.size())) {
+        throw std::out_of_range("Invalid level ID: " + std::to_string(level_id));
+    }
+    if (location < 0 || location >= static_cast<int>(boundaries[level_id].location_to_unit.size())) {
+        throw std::out_of_range("Invalid location ID: " + std::to_string(location));
+    }
+    return boundaries[level_id].location_to_unit[location];
 }
 
 const std::vector<int>& AdminLevelManager::get_locations_in_unit(const std::string& level_name, int unit_id) const {
@@ -112,7 +122,16 @@ int AdminLevelManager::get_unit_count(const std::string& level_name) const {
     if (it == name_to_id.end()) {
         throw std::runtime_error("Administrative level '" + level_name + "' not found");
     }
-    return boundaries[it->second].unit_count;
+    return get_unit_count(it->second);
+}
+
+int AdminLevelManager::get_unit_count(int level_id) const {
+    if (level_id < 0 || level_id >= static_cast<int>(boundaries.size())) {
+        VLOG(1) << "Invalid level ID: " << level_id << " for " << id_to_name[level_id];
+        VLOG(1) << "Boundaries size: " << boundaries.size();
+        throw std::out_of_range("Invalid level ID: " + std::to_string(level_id));
+    }
+    return boundaries[level_id].unit_count;
 }
 
 BoundaryData AdminLevelManager::populate_lookup(const AscFile* raster) {
@@ -178,18 +197,12 @@ void AdminLevelManager::validate_raster(const AscFile* raster) const {
 }
 
 void AdminLevelManager::validate() const {
-    // Check if district level is configured when admin boundaries are used
-    if (!id_to_name.empty() && !has_district_) {
-        throw std::runtime_error("Administrative boundaries configured but missing required 'district' level");
-    }
-
     // Validate each boundary in id_to_name
     for (int i = 0; i < id_to_name.size(); i++) {
         if (boundaries[i].unit_count == 0) {
             throw std::runtime_error("Administrative level '" + id_to_name[i] + "' has no units");
         }
     }
-
 
     // all admin levels must have the same dimensions for location_to_unit
     for (int i = 0; i < boundaries.size(); i++) {

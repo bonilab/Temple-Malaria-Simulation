@@ -228,36 +228,25 @@ public:
   AscFile* get_raster(SpatialFileType type) { return data[type].get(); }
 
   /**
-   * @brief Populates dependent data structures after input data and raster
-   * files have been processed.
+   * @brief Initializes and configures administrative boundaries for the simulation.
    *
    * This function is designed to run once all necessary input data and raster
-   * files have been read and processed. It performs the crucial step of
-   * populating several dependent data structures that are essential for the
-   * simulation's operation. These include caching the total count of districts,
-   * determining the first district index based on the spatial data, and
-   * creating the district lookup table. The function ensures that these
-   * components are correctly initialized before the simulation proceeds,
-   * guaranteeing that spatial queries and operations can be conducted
-   * efficiently.
+   * files have been read and processed. It sets up the AdminLevelManager and 
+   * registers any administrative levels (like districts) found in the raster data.
+   * The administrative boundaries are essential for spatial queries and operations
+   * in the simulation, allowing locations to be grouped by administrative units.
    *
    * @note This function should be called after all input and raster data have
    * been fully processed but before the simulation begins to ensure that all
-   * dependent data structures are accurately populated. Failure to call this
-   * function in the correct sequence may result in uninitialized or incorrect
-   * data being used in the simulation, leading to potential errors or
-   * inaccurate results.
+   * administrative boundaries are accurately configured.
    *
-   * @pre Raster files and input data must be loaded and processed. This
-   * includes loading spatial data such as district boundaries and population
-   * distributions from raster files.
+   * @pre Raster files and input data must be loaded and processed, including
+   * any administrative boundary rasters (like district boundaries).
    *
-   * @post The total district count is cached, the first district index is
-   * determined, and the district lookup table is created and populated. These
-   * actions prepare the system for efficient spatial operations and
-   * simulations.
+   * @post The AdminLevelManager is initialized with all relevant administrative levels,
+   * and administrative boundary data is configured for use in spatial operations.
    */
-  void populate_dependent_data();
+  void initialize_admin_boundaries();
 
   // Reset the singleton instance for testing
   void reset() {

@@ -51,8 +51,10 @@ bool SpatialData::parse(const YAML::Node &node) {
   load_location_data(node);
   load_treatment_data(node);
 
-  // Finalize setup, populate location_to_district, district_to_locations, and reset rasters
-  populate_dependent_data();
+  // Finalize setup, populate location_to_district, district_to_locations
+  initialize_admin_boundaries();
+
+  // Reset rasters
   parse_complete();
   return true;
 }
@@ -296,11 +298,6 @@ void SpatialData::load_files(const YAML::Node &node) {
          SpatialData::SpatialFileType::Population);
     using_raster = true;
   }
-  if (node[DISTRICT_RASTER]) {
-    load(node[DISTRICT_RASTER].as<std::string>(),
-         SpatialData::SpatialFileType::Districts);
-    using_raster = true;
-  }
   if (node[TRAVEL_RASTER]) {
     load(node[TRAVEL_RASTER].as<std::string>(),
          SpatialData::SpatialFileType::Travel);
@@ -321,6 +318,13 @@ void SpatialData::load_files(const YAML::Node &node) {
          SpatialData::SpatialFileType::PrTreatmentOver5);
     using_raster = true;
   }
+
+  if (node[DISTRICT_RASTER]) {
+    load(node[DISTRICT_RASTER].as<std::string>(),
+         SpatialData::SpatialFileType::Districts);
+    using_raster = true;
+  }
+
   // Check to make sure our data is OK
   std::string errors;
   if (check_catalog(errors)) {
@@ -427,7 +431,7 @@ void SpatialData::load_location_data(const YAML::Node &node) {
   }
 }
 
-void SpatialData::populate_dependent_data() {
+void SpatialData::initialize_admin_boundaries() {
     // simply create a new AdminLevelManager, the old one will be deleted
     admin_manager_ = std::make_unique<AdminLevelManager>();
     // Set up district level if district raster exists (for backward compatibility)
@@ -454,7 +458,6 @@ void SpatialData::populate_dependent_data() {
 
     LOG(INFO) << "Administrative boundaries initialized successfully";
 }
-
 
 void SpatialData::parse_complete() {
   // Simply reset unique_ptrs instead of manual delete

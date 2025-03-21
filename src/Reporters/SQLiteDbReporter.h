@@ -36,7 +36,8 @@ private:
   std::vector<std::string> insert_genome_query_prefixes_;
   
   // Database schema management
-  void create_admin_level_tables();
+  void create_all_reporting_tables();
+  void create_reporting_tables_for_level(int level_id, const std::string& ageClassColumnDefinitions, const std::string& ageClassColumns);
   void populate_db_schema();
   void populate_genotype_table();
   void populate_admin_level_table();
@@ -45,8 +46,11 @@ private:
   // Utility methods for table names
   std::string get_site_table_name(int level_id) const;
   std::string get_genome_table_name(int level_id) const;
+  
 
 protected:
+  // Special level_id for cell-level data
+  static constexpr int CELL_LEVEL_ID = -1;
   // Database connection
   std::unique_ptr<SQLiteDatabase> db;
 
@@ -54,7 +58,7 @@ protected:
   virtual void monthly_report_genome_data(int month_id) = 0;
   virtual void monthly_report_site_data(int month_id) = 0;
 
-  // Data insertion helpers
+  // Data insertion helpers - using level_id = CELL_LEVEL_ID for cell data
   void insert_monthly_site_data(int level_id, const std::vector<std::string> &site_data);
   void insert_monthly_genome_data(int level_id, const std::vector<std::string> &genome_data);
   

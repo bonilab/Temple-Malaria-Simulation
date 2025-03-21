@@ -18,6 +18,9 @@ class SQLiteMonthlyReporter : public SQLiteDbReporter {
   void monthly_report_site_data(int monthId) override;
 
 protected:
+  // Flag to enable cell-level reporting
+  bool enable_cell_level_reporting{false};
+
   struct MonthlySiteData {
     std::vector<double> eir, pfpr_under5, pfpr2to10, pfpr_all;
     std::vector<int> population, clinical_episodes, treatments,
@@ -48,6 +51,10 @@ private:
   void collect_genome_data_for_location(size_t location, int level_id);
   void collect_genome_data_for_a_person(Person* person, int unit_id, int level_id);
   void build_up_genome_data_insert_values(int monthId, int level_id);
+  
+  // New methods for cell-level reporting
+  void monthly_report_cell_site_data(int monthId);
+  void monthly_report_cell_genome_data(int monthId);
 
 public:
   SQLiteMonthlyReporter() = default;
@@ -55,6 +62,10 @@ public:
 
   // Initialize the reporter with job number and path
   void initialize(int jobNumber, const std::string &path) override;
+  
+  // Set the flag to enable cell-level reporting
+  void set_cell_level_reporting(bool enable) { enable_cell_level_reporting = enable; }
+  bool is_cell_level_reporting_enabled() const { return enable_cell_level_reporting; }
 };
 
 #endif

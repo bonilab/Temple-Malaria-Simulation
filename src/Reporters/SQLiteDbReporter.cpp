@@ -79,9 +79,18 @@ void SQLiteDbReporter::populate_admin_level_table() {
 }
 
 // Function to create tables for each admin level
-void SQLiteDbReporter::create_admin_level_tables() {
+void SQLiteDbReporter::create_all_reporting_tables() {
   auto admin_levels = SpatialData::get_instance().get_admin_level_manager()->get_level_names();
   
+
+  std::string ageClassColumnDefinitions;
+  for (auto ndx = 0; ndx < Model::CONFIG->age_structure().size(); ndx++) {
+    auto agFrom = ndx == 0 ? 0 : Model::CONFIG->age_structure()[ndx - 1];
+    auto agTo = Model::CONFIG->age_structure()[ndx];
+    ageClassColumnDefinitions +=
+        fmt::format("clinical_episodes_by_age_class_{}_{} INTEGER, ", agFrom, agTo);
+  }
+
   std::string ageClassColumns;
   for (auto ndx = 0; ndx < Model::CONFIG->age_structure().size(); ndx++) {
     auto agFrom = ndx == 0 ? 0 : Model::CONFIG->age_structure()[ndx - 1];
@@ -90,80 +99,96 @@ void SQLiteDbReporter::create_admin_level_tables() {
         fmt::format("clinical_episodes_by_age_class_{}_{}, ", agFrom, agTo);
   }
 
-  // Create tables for each admin level
+  // Resize the query prefix vectors to include all admin levels plus cell level
+  insert_site_query_prefixes_.resize(admin_levels.size() + 1);
+  insert_genome_query_prefixes_.resize(admin_levels.size() + 1);
+  
+  // First create the cell-level tables
+  create_reporting_tables_for_level(CELL_LEVEL_ID, ageClassColumnDefinitions, ageClassColumns);
+  
+  // Now create tables for each admin level
   for (size_t level_id = 0; level_id < admin_levels.size(); level_id++) {
-    // Generate table name for this admin level
-    std::string site_table_name = get_site_table_name(level_id);
-    std::string genome_table_name = get_genome_table_name(level_id);
+    create_reporting_tables_for_level(level_id, ageClassColumnDefinitions, ageClassColumns);
+  }
+}
+
+void SQLiteDbReporter::create_reporting_tables_for_level(int level_id, const std::string& ageClassColumnDefinitions, const std::string& ageClassColumns) {
+  // Generate table names for this level
+  std::string site_table_name = get_site_table_name(level_id);
+  std::string genome_table_name = get_genome_table_name(level_id);
+
+  // location_id for cell level or unit_id for admin level
+  std::string location_id_column = (level_id == CELL_LEVEL_ID) ? "location_id" : "unit_id";
+  
+  // Create site data table for this level
+  std::string createSiteDataTable = 
+    fmt::format(R""""(
+      CREATE TABLE IF NOT EXISTS {} (
+          monthly_data_id INTEGER NOT NULL,
+          {} INTEGER NOT NULL,
+          population INTEGER NOT NULL,
+          clinical_episodes INTEGER NOT NULL, )"""", site_table_name, location_id_column)
+    + ageClassColumnDefinitions +
+    fmt::format(R""""(
+          treatments INTEGER NOT NULL,
+          treatment_failures INTEGER NOT NULL,
+          eir REAL NOT NULL,
+          pfpr_under5 REAL NOT NULL,
+          pfpr_2to10 REAL NOT NULL,
+          pfpr_all REAL NOT NULL,
+          infected_individuals INTEGER,
+          non_treatment INTEGER NOT NULL,
+          under5_treatment INTEGER NOT NULL,
+          over5_treatment INTEGER NOT NULL,
+          PRIMARY KEY (monthly_data_id, {}),
+          FOREIGN KEY (monthly_data_id) REFERENCES monthly_data(id)
+      );
+    )"""",location_id_column);
+  
+  // Create genome data table for this level
+  std::string createGenomeDataTable = 
+    fmt::format(R""""(
+      CREATE TABLE IF NOT EXISTS {} (
+          monthly_data_id INTEGER NOT NULL,
+          {} INTEGER NOT NULL,
+          genome_id INTEGER NOT NULL,
+          occurrences INTEGER NOT NULL,
+          clinical_occurrences INTEGER NOT NULL,
+          occurrences_0to5 INTEGER NOT NULL,
+          occurrences_2to10 INTEGER NOT NULL,
+          weighted_occurrences REAL NOT NULL,
+          PRIMARY KEY (monthly_data_id, genome_id, {}),
+          FOREIGN KEY (genome_id) REFERENCES genotype(id),
+          FOREIGN KEY (monthly_data_id) REFERENCES monthly_data(id)
+      );
+    )"""", genome_table_name, location_id_column, location_id_column);
+  try {
+    // Execute the creation queries
+    db->execute(createSiteDataTable);
+    db->execute(createGenomeDataTable);
     
-    // Create site data table for this admin level
-    std::string createSiteDataTable = 
-      fmt::format(R""""(
-        CREATE TABLE IF NOT EXISTS {} (
-            monthly_data_id INTEGER NOT NULL,
-            location_id INTEGER NOT NULL,
-            population INTEGER NOT NULL,
-            clinical_episodes INTEGER NOT NULL, )"""", site_table_name)
-      + ageClassColumns +
-      R""""(
-            treatments INTEGER NOT NULL,
-            treatment_failures INTEGER NOT NULL,
-            eir REAL NOT NULL,
-            pfpr_under5 REAL NOT NULL,
-            pfpr_2to10 REAL NOT NULL,
-            pfpr_all REAL NOT NULL,
-            infected_individuals INTEGER,
-            non_treatment INTEGER NOT NULL,
-            under5_treatment INTEGER NOT NULL,
-            over5_treatment INTEGER NOT NULL,
-            PRIMARY KEY (monthly_data_id, location_id),
-            FOREIGN KEY (monthly_data_id) REFERENCES monthly_data(id)
-        );
-      )"""";
+    // Determine index for query prefixes
+    int prefix_index = (level_id == CELL_LEVEL_ID) ? 
+                      insert_site_query_prefixes_.size() - 1 : level_id;
     
-    // Create genome data table for this admin level
-    std::string createGenomeDataTable = 
-      fmt::format(R""""(
-        CREATE TABLE IF NOT EXISTS {} (
-            monthly_data_id INTEGER NOT NULL,
-            location_id INTEGER NOT NULL,
-            genome_id INTEGER NOT NULL,
-            occurrences INTEGER NOT NULL,
-            clinical_occurrences INTEGER NOT NULL,
-            occurrences_0to5 INTEGER NOT NULL,
-            occurrences_2to10 INTEGER NOT NULL,
-            weighted_occurrences REAL NOT NULL,
-            PRIMARY KEY (monthly_data_id, genome_id, location_id),
-            FOREIGN KEY (genome_id) REFERENCES genotype(id),
-            FOREIGN KEY (monthly_data_id) REFERENCES monthly_data(id)
-        );
-      )"""", genome_table_name);
+    // Create insert query prefixes for this level
+    insert_site_query_prefixes_[prefix_index] = 
+      fmt::format("INSERT INTO {} (monthly_data_id, {}, "
+        "population, clinical_episodes, ", site_table_name, location_id_column) 
+      + ageClassColumns + 
+      " treatments, eir, pfpr_under5, pfpr_2to10, pfpr_all, infected_individuals, treatment_failures,"
+      " non_treatment, under5_treatment, over5_treatment) VALUES";
     
-    try {
-      // Execute the creation queries
-      db->execute(createSiteDataTable);
-      db->execute(createGenomeDataTable);
-      
-      // Create insert query prefixes for this admin level
-      insert_site_query_prefixes_[level_id] = 
-        fmt::format(" INSERT INTO {} (monthly_data_id, location_id, "
-          "population, clinical_episodes, ", site_table_name) 
-        + ageClassColumns + 
-        " treatments, eir, pfpr_under5, pfpr_2to10, pfpr_all, infected_individuals, treatment_failures,"
-        " non_treatment, under5_treatment, over5_treatment) VALUES";
-      
-      insert_genome_query_prefixes_[level_id] = 
-        fmt::format(R"""(
-          INSERT INTO {} 
-          (monthly_data_id, location_id, genome_id, occurrences, 
-          clinical_occurrences, occurrences_0to5, occurrences_2to10, 
-          weighted_occurrences) 
-          VALUES 
-        )""", genome_table_name);
-      
-    } catch (const std::exception &ex) {
-      LOG(ERROR) << "Error creating tables for admin level " << level_id << ": " << ex.what();
-    }
+    insert_genome_query_prefixes_[prefix_index] = 
+      fmt::format(R"""(
+        INSERT INTO {} 
+        (monthly_data_id, {}, genome_id, occurrences, 
+        clinical_occurrences, occurrences_0to5, occurrences_2to10, 
+        weighted_occurrences) 
+        VALUES 
+      )""", genome_table_name, location_id_column);
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << "Error creating tables for level " << level_id << ": " << ex.what();
   }
 }
 
@@ -254,8 +279,8 @@ void SQLiteDbReporter::populate_db_schema() {
     db->execute(createAdminLevel);
     db->execute(createLocationAdminMap);
     
-    // Create tables for all admin levels
-    create_admin_level_tables();
+    // Create tables for all reporting levels (cell and admin)
+    create_all_reporting_tables();
     
   } catch (const std::exception &ex) {
     LOG(ERROR) << "Error in populate_db_schema: " << ex.what();
@@ -331,8 +356,12 @@ void SQLiteDbReporter::insert_monthly_site_data(int level_id,
   // Skip if empty
   if (siteData.empty()) return;
     
+  // For cell level, use the last index in the query prefix vector
+  int query_index = (level_id == CELL_LEVEL_ID) ? 
+                    insert_site_query_prefixes_.size() - 1 : level_id;
+    
   // Insert the site data into the database
-  std::string query = insert_site_query_prefixes_[level_id] + 
+  std::string query = insert_site_query_prefixes_[query_index] + 
                       StringHelpers::join(siteData, ",") + ";";
   db->execute(query);
 }
@@ -342,17 +371,27 @@ void SQLiteDbReporter::insert_monthly_genome_data(int level_id,
   // Skip if empty
   if (genomeData.empty()) return;
     
+  // For cell level, use the last index in the query prefix vector
+  int query_index = (level_id == CELL_LEVEL_ID) ? 
+                    insert_genome_query_prefixes_.size() - 1 : level_id;
+    
   // Insert the genome data into the database
-  std::string query = insert_genome_query_prefixes_[level_id] +
+  std::string query = insert_genome_query_prefixes_[query_index] +
                       StringHelpers::join(genomeData, ",") + ";";
   db->execute(query);
 }
 
 std::string SQLiteDbReporter::get_site_table_name(int level_id) const {
+  if (level_id == CELL_LEVEL_ID) {
+    return "monthly_site_data_cell";
+  }
   return "monthly_site_data_" + SpatialData::get_instance().get_admin_level_name(level_id);
 }
 
 std::string SQLiteDbReporter::get_genome_table_name(int level_id) const {
+  if (level_id == CELL_LEVEL_ID) {
+    return "monthly_genome_data_cell";
+  }
   return "monthly_genome_data_" + SpatialData::get_instance().get_admin_level_name(level_id);
 }
 

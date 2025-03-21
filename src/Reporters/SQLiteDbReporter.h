@@ -50,7 +50,7 @@ private:
 
 protected:
   // Special level_id for cell-level data
-  static constexpr int CELL_LEVEL_ID = -1;
+  int CELL_LEVEL_ID = -1;
   // Database connection
   std::unique_ptr<SQLiteDatabase> db;
 

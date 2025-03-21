@@ -99,15 +99,16 @@ void SQLiteDbReporter::create_all_reporting_tables() {
         fmt::format("clinical_episodes_by_age_class_{}_{}, ", agFrom, agTo);
   }
 
-  // Resize the query prefix vectors to include all admin levels plus cell level
-  insert_site_query_prefixes_.resize(admin_levels.size() + 1);
-  insert_genome_query_prefixes_.resize(admin_levels.size() + 1);
+  // // Include cell level in the number of levels
+  // int number_of_levels = admin_levels.size() + 1;
+
+  // // Resize the query prefix vectors to include all admin levels plus cell level
+  // insert_site_query_prefixes_.resize(number_of_levels);
+  // insert_genome_query_prefixes_.resize(number_of_levels);
   
-  // First create the cell-level tables
-  create_reporting_tables_for_level(CELL_LEVEL_ID, ageClassColumnDefinitions, ageClassColumns);
   
-  // Now create tables for each admin level
-  for (size_t level_id = 0; level_id < admin_levels.size(); level_id++) {
+  // Now create tables for each admin level including cell level
+  for (size_t level_id = 0; level_id < admin_levels.size() + 1; level_id++) {
     create_reporting_tables_for_level(level_id, ageClassColumnDefinitions, ageClassColumns);
   }
 }
@@ -313,14 +314,20 @@ void SQLiteDbReporter::initialize(int jobNumber, const std::string &path) {
 
   // Get number of admin levels to initialize vectors
   int admin_level_count = SpatialData::get_instance().get_admin_level_manager()->get_level_names().size();
-  insert_site_query_prefixes_.resize(admin_level_count);
-  insert_genome_query_prefixes_.resize(admin_level_count);
+
+  // Include cell level in the number of levels
+  insert_site_query_prefixes_.resize(admin_level_count + 1);
+  insert_genome_query_prefixes_.resize(admin_level_count + 1);
+
+  // Update cell level id
+  CELL_LEVEL_ID = admin_level_count;
 
   populate_db_schema();
-  // populate the genotype table
+  // populate the genotype table data
   populate_genotype_table();
-  // populate the admin level table
+  // populate the admin level table data  
   populate_admin_level_table();
+  // populate the location admin map table data
   populate_location_admin_map_table();
 
   std::string ageClassColumns;

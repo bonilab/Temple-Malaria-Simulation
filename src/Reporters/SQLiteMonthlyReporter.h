@@ -45,19 +45,15 @@ protected:
 private:
   void reset_site_data_structures(int level_id, int vectorSize, size_t numAgeClasses);
   void reset_genome_data_structures(int level_id, int vectorSize, size_t numGenotypes);
-  void count_infections_for_location(int location, int level_id);
+  void count_infections_for_location(int level_id, int location_id);
   void collect_site_data_for_location(int location, int level_id);
   void calculate_and_build_up_site_data_insert_values(int monthId, int level_id);
   void collect_genome_data_for_location(size_t location, int level_id);
   void collect_genome_data_for_a_person(Person* person, int unit_id, int level_id);
   void build_up_genome_data_insert_values(int monthId, int level_id);
-  
-  // New methods for cell-level reporting
-  void monthly_report_cell_site_data(int monthId);
-  void monthly_report_cell_genome_data(int monthId);
 
 public:
-  SQLiteMonthlyReporter() = default;
+  SQLiteMonthlyReporter(bool cell_level_reporting = false) : enable_cell_level_reporting(cell_level_reporting) {}
   ~SQLiteMonthlyReporter() override = default;
 
   // Initialize the reporter with job number and path

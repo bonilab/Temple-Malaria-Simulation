@@ -41,6 +41,10 @@ Version 4.2.0 introduces flexible multi-administrative boundaries support, allow
    - Each admin level has its own dedicated database tables:
      - `monthly_site_data_[level_name]` - Site data aggregated by admin level
      - `monthly_genome_data_[level_name]` - Genome data aggregated by admin level
+   - Cell-level reporting capability:
+     - Automatically enabled when no administrative boundaries are configured
+     - Can be explicitly enabled via configuration
+     - Uses tables `monthly_site_data_cell` and `monthly_genome_data_cell`
    - Maintains backward compatibility with original district-level reporting
    - Performance optimizations for multiple level reporting
    - Consistent data aggregation methodology across all admin levels
@@ -78,13 +82,18 @@ Version 4.2.0 introduces flexible multi-administrative boundaries support, allow
 
 ### Configuration Format
 ```yaml
-administrative_boundaries:
-  - name: "district"    # First admin level
-    raster: "path/to/district.asc"
-  - name: "province"    # Second additional level
-    raster: "path/to/province.asc"
-  - name: "region"      # Can add as many levels as needed
-    raster: "path/to/region.asc"
+
+# Cell level reporting configuration
+cell_level_reporting: true  # Optional, defaults to false if not specified
+
+raster_db:
+   administrative_boundaries:
+   - name: "district"    # First admin level
+      raster: "path/to/district.asc"
+   - name: "province"    # Second additional level
+      raster: "path/to/province.asc"
+   - name: "region"      # Can add as many levels as needed
+      raster: "path/to/region.asc"
 ```
 
 ### Data Structure
@@ -122,6 +131,10 @@ The multi-administrative level reporting system has been implemented in the SQLi
    Each administrative level has its own dedicated tables with naming convention:
    - `monthly_site_data_[level_name]` - Epidemiological data aggregated by admin unit
    - `monthly_genome_data_[level_name]` - Genomic data aggregated by admin unit
+   
+   Cell level data (when enabled) uses:
+   - `monthly_site_data_cell` - Epidemiological data for individual cells/locations
+   - `monthly_genome_data_cell` - Genomic data for individual cells/locations
 
 3. Table Relationships:
    - Each admin-level table references `monthly_data` through `monthly_data_id`
@@ -318,7 +331,28 @@ SELECT * FROM monthly_site_data_province;
 
 -- Get data for specific unit in a specific level
 SELECT * FROM monthly_site_data_province WHERE location_id = 3;
+
+-- Get cell-level data (when cell level reporting is enabled)
+SELECT * FROM monthly_site_data_cell;
 ```
+
+6. Enable cell-level reporting in your configuration:
+```yaml
+# Enable cell-level reporting alongside administrative reporting
+cell_level_reporting: true
+
+raster_db:
+   # other settings 
+   # Administrative boundaries configuration
+   administrative_boundaries:
+   - name: "district"
+      raster: "path/to/district.asc"
+```
+
+7. Cell-level reporting behavior:
+   - If no administrative boundaries are configured, cell-level reporting is automatically enabled
+   - To explicitly enable cell-level reporting alongside admin-level reporting, set `cell_level_reporting: true`
+   - To disable cell-level reporting when administrative boundaries are configured, set `cell_level_reporting: false` or omit the setting
 
 This new API provides a consistent interface for working with any administrative level while maintaining backward compatibility through the "district" level name.
 

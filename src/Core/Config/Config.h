@@ -110,6 +110,8 @@ public:
 
   CONFIG_ITEM(artificial_rescaling_of_population_size, double, 1.0)
 
+  CONFIG_ITEM(cell_level_reporting, bool, false)
+
   CUSTOM_CONFIG_ITEM(start_of_comparison_period, 0)
 
   CUSTOM_CONFIG_ITEM(number_of_age_classes, 0)

@@ -145,7 +145,7 @@ void Model::initialize(int job_number, const std::string &path) {
   VLOG(1) << "Initialing reporter(s)...";
   try {
     if (reporter_type_.empty()) {
-      add_reporter(Reporter::MakeReport(Reporter::MONTHLY_REPORTER));
+      add_reporter(Reporter::MakeReport(Reporter::SQLITE_MONTHLY_REPORTER));
     } else {
       for (const auto &type : StringHelpers::split(reporter_type_, ',')) {
         if (Reporter::ReportTypeMap.find(type)

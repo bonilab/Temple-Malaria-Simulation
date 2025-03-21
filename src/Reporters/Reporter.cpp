@@ -9,6 +9,7 @@
 #include "ConsoleReporter.h"
 #include "MMCReporter.h"
 #include "Model.h"
+#include "Core/Config/Config.h"
 #include "MonthlyReporter.h"
 #include "SQLiteMonthlyReporter.h"
 #include "Specialist/AgeBandReporter.h"
@@ -52,8 +53,10 @@ Reporter* Reporter::MakeReport(ReportType report_type) {
       return new SeasonalImmunity();
     case AGE_BAND_REPORTER:
       return new AgeBandReporter();
-    case SQLITE_MONTHLY_REPORTER:
-      return new SQLiteMonthlyReporter();
+    case SQLITE_MONTHLY_REPORTER:{
+      auto cell_level_reporting = Model::CONFIG->cell_level_reporting();
+      return new SQLiteMonthlyReporter(cell_level_reporting);
+    }
 #ifdef ENABLE_TRAVEL_TRACKING
     case TRAVEL_TRACKING_REPORTER:
       return new TravelTrackingReporter();

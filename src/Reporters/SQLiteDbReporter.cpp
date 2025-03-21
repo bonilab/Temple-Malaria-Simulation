@@ -13,29 +13,25 @@
 // Function to populate the 'genotype' table in the database
 void SQLiteDbReporter::populate_genotype_table() {
   try {
-    // Use the Database class to execute and prepare SQL statements
+    // Use the Database class to execute SQL statements
     db->execute("DELETE FROM genotype;");  // Clear the genotype table
 
-    // Prepare the bulk query
-    auto* stmt = db->prepare(insert_genotype_query_);
-
     auto* config = Model::CONFIG;
+    std::vector<std::string> batch_values;
+    batch_values.reserve(config->number_of_parasite_types());
 
     for (auto id = 0; id < config->number_of_parasite_types(); id++) {
       auto* genotype = (*config->genotype_db())[id];
-      // Bind values to the prepared statement
-      sqlite3_bind_int(stmt, 1, id);
-      sqlite3_bind_text(stmt, 2, genotype->to_string(config).c_str(), -1,
-                        SQLITE_STATIC);
-
-      if (sqlite3_step(stmt) != SQLITE_DONE) {
-        throw std::runtime_error("Error executing INSERT statement");
-      }
-
-      sqlite3_reset(stmt);  // Reset the statement for the next iteration
+      // Escape single quotes in genotype string if needed
+      std::string genotype_str = genotype->to_string(config);
+      StringHelpers::replace_all(genotype_str, "'", "''");
+      
+      batch_values.push_back(fmt::format("({}, '{}')", id, genotype_str));
     }
 
-    sqlite3_finalize(stmt);  // Finalize the statement
+    // Insert in batches
+    std::string query_prefix = "INSERT INTO genotype (id, name) VALUES ";
+    batch_insert_query(query_prefix, batch_values);
 
   } catch (const std::exception &ex) {
     LOG(FATAL) << __FUNCTION__ << "-" << ex.what();
@@ -48,9 +44,6 @@ void SQLiteDbReporter::populate_admin_level_table() {
     // Clear the admin_level table
     db->execute("DELETE FROM admin_level;");
 
-    // Prepare the bulk query
-    auto* stmt = db->prepare(insert_admin_level_query_);
-
     // Get admin level names from SpatialData
     auto admin_levels = SpatialData::get_instance().get_admin_level_manager()->get_level_names();
 
@@ -59,19 +52,20 @@ void SQLiteDbReporter::populate_admin_level_table() {
       return;
     }
 
+    std::vector<std::string> batch_values;
+    batch_values.reserve(admin_levels.size());
+
     for (size_t id = 0; id < admin_levels.size(); id++) {
-      // Bind values to the prepared statement
-      sqlite3_bind_int(stmt, 1, id);
-      sqlite3_bind_text(stmt, 2, admin_levels[id].c_str(), -1, SQLITE_STATIC);
-
-      if (sqlite3_step(stmt) != SQLITE_DONE) {
-        throw std::runtime_error("Error executing INSERT statement for admin_level");
-      }
-
-      sqlite3_reset(stmt);  // Reset the statement for the next iteration
+      // Escape single quotes if needed
+      std::string level_name = admin_levels[id];
+      StringHelpers::replace_all(level_name, "'", "''");
+      
+      batch_values.push_back(fmt::format("({}, '{}')", id, level_name));
     }
 
-    sqlite3_finalize(stmt);  // Finalize the statement
+    // Insert in batches
+    std::string query_prefix = "INSERT INTO admin_level (id, name) VALUES ";
+    batch_insert_query(query_prefix, batch_values);
 
   } catch (const std::exception &ex) {
     LOG(FATAL) << __FUNCTION__ << "-" << ex.what();
@@ -199,12 +193,13 @@ void SQLiteDbReporter::populate_location_admin_map_table() {
     // Clear the table
     db->execute("DELETE FROM location_admin_map;");
 
-    // Prepare the bulk query
-    auto* stmt = db->prepare(insert_location_admin_map_query_);
-
     auto& spatial_data = SpatialData::get_instance();
     auto& location_db = Model::CONFIG->location_db();
     auto admin_level_manager = spatial_data.get_admin_level_manager();
+    
+    // Prepare for batch insertion
+    std::vector<std::string> batch_values;
+    batch_values.reserve(location_db.size() * admin_level_manager->get_level_count());
     
     // For each location in the location database
     for (int location_id = 0; location_id < location_db.size(); location_id++) {
@@ -213,20 +208,15 @@ void SQLiteDbReporter::populate_location_admin_map_table() {
         // Get admin unit ID for this location at this admin level
         auto admin_unit_id = spatial_data.get_admin_unit(admin_level_id, location_id);
         
-        // Bind values to the prepared statement
-        sqlite3_bind_int(stmt, 1, location_id);
-        sqlite3_bind_int(stmt, 2, admin_level_id);
-        sqlite3_bind_int(stmt, 3, admin_unit_id);
-
-        if (sqlite3_step(stmt) != SQLITE_DONE) {
-          throw std::runtime_error("Error executing INSERT statement for location_admin_map");
-        }
-
-        sqlite3_reset(stmt);  // Reset the statement for the next iteration
+        // Add to batch values
+        batch_values.push_back(fmt::format("({}, {}, {})", 
+                              location_id, admin_level_id, admin_unit_id));
       }
     }
-
-    sqlite3_finalize(stmt);  // Finalize the statement
+    
+    // Insert in batches
+    std::string query_prefix = "INSERT INTO location_admin_map (location_id, admin_level_id, admin_unit_id) VALUES ";
+    batch_insert_query(query_prefix, batch_values);
 
   } catch (const std::exception &ex) {
     LOG(ERROR) << __FUNCTION__ << "-" << ex.what();
@@ -358,6 +348,22 @@ void SQLiteDbReporter::monthly_report() {
   }
 }
 
+void SQLiteDbReporter::batch_insert_query(const std::string &query_prefix, 
+                                         const std::vector<std::string> &values) {
+  if (values.empty()) return;
+  
+  // Process in batches
+  for (size_t i = 0; i < values.size(); i += batch_size) {
+    size_t end = std::min(i + batch_size, values.size());
+    std::vector<std::string> batch_values(values.begin() + i, values.begin() + end);
+    
+    // Create batch query
+    std::string query = query_prefix + 
+                      StringHelpers::join(batch_values, ",") + ";";
+    db->execute(query);
+  }
+}
+
 void SQLiteDbReporter::insert_monthly_site_data(int level_id,
     const std::vector<std::string> &siteData) {
   // Skip if empty
@@ -367,10 +373,8 @@ void SQLiteDbReporter::insert_monthly_site_data(int level_id,
   int query_index = (level_id == CELL_LEVEL_ID) ? 
                     insert_site_query_prefixes_.size() - 1 : level_id;
     
-  // Insert the site data into the database
-  std::string query = insert_site_query_prefixes_[query_index] + 
-                      StringHelpers::join(siteData, ",") + ";";
-  db->execute(query);
+  // Insert the site data into the database using batch insertion
+  batch_insert_query(insert_site_query_prefixes_[query_index], siteData);
 }
 
 void SQLiteDbReporter::insert_monthly_genome_data(int level_id,
@@ -382,10 +386,8 @@ void SQLiteDbReporter::insert_monthly_genome_data(int level_id,
   int query_index = (level_id == CELL_LEVEL_ID) ? 
                     insert_genome_query_prefixes_.size() - 1 : level_id;
     
-  // Insert the genome data into the database
-  std::string query = insert_genome_query_prefixes_[query_index] +
-                      StringHelpers::join(genomeData, ",") + ";";
-  db->execute(query);
+  // Insert the genome data into the database using batch insertion
+  batch_insert_query(insert_genome_query_prefixes_[query_index], genomeData);
 }
 
 std::string SQLiteDbReporter::get_site_table_name(int level_id) const {

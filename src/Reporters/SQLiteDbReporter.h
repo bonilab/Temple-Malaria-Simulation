@@ -53,6 +53,10 @@ protected:
   int CELL_LEVEL_ID = -1;
   // Database connection
   std::unique_ptr<SQLiteDatabase> db;
+  
+  // Constants for batch size
+  static constexpr int DEFAULT_BATCH_SIZE = 1000;
+  int batch_size = DEFAULT_BATCH_SIZE;
 
   // Virtual methods to be implemented by derived classes
   virtual void monthly_report_genome_data(int month_id) = 0;
@@ -61,6 +65,9 @@ protected:
   // Data insertion helpers - using level_id = CELL_LEVEL_ID for cell data
   void insert_monthly_site_data(int level_id, const std::vector<std::string> &site_data);
   void insert_monthly_genome_data(int level_id, const std::vector<std::string> &genome_data);
+  
+  // Batch insertion helpers
+  void batch_insert_query(const std::string &query_prefix, const std::vector<std::string> &values);
   
   // Utility method
   int get_admin_level_count() const;
@@ -82,6 +89,10 @@ public:
   void begin_time_step() override {}
   void monthly_report() override;
   void after_run() override {}
+
+  // Set batch size for database operations
+  void set_batch_size(int size) { batch_size = size > 0 ? size : DEFAULT_BATCH_SIZE; }
+  int get_batch_size() const { return batch_size; }
 };
 
 #endif // SQLITEDBREPORTER_H

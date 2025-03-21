@@ -1,19 +1,21 @@
 /*
  * SQLiteDbReporter.h
  *
- * Override the base DbReporter and log genotype information at the district
- * level.
+ * SQLite implementation of the reporter that logs simulation data including
+ * genotype information at different administrative levels.
  */
 #ifndef SQLITEDBREPORTER_H
 #define SQLITEDBREPORTER_H
 
 #include "Helpers/SQLiteDatabase.h"
 #include "Reporter.h"
-
-class PersonIndexByLocationStateAgeClass;
+#include <memory>
+#include <string>
+#include <vector>
 
 class SQLiteDbReporter : public Reporter {
 private:
+  // SQL query templates
   const std::string insert_genotype_query_ =
       "INSERT INTO genotype (id, name) VALUES (?, ?);";
 
@@ -24,68 +26,58 @@ private:
       "INSERT INTO location_admin_map (location_id, admin_level_id, admin_unit_id) VALUES (?, ?, ?);";
 
   const std::string insert_common_query_ = R""""(
-  INSERT INTO MonthlyData (DaysElapsed, ModelTime, SeasonalFactor)
+  INSERT INTO monthly_data (days_elapsed, model_time, seasonal_factor)
   VALUES (?, ?, ?)
   RETURNING id;
   )"""";
 
-  // Generate table name for admin level
-  std::string get_site_table_name(int level_id) const;
-  
-  std::string get_genome_table_name(int level_id) const;
-  
-  // Vector to store dynamically generated query prefixes for each admin level
+  // Dynamically generated query prefixes for each admin level
   std::vector<std::string> insert_site_query_prefixes_;
   std::vector<std::string> insert_genome_query_prefixes_;
   
-  // Method to create tables for all admin levels
+  // Database schema management
   void create_admin_level_tables();
-  
-  // Method to generate insert query prefixes for all admin levels
-  void generate_insert_query_prefixes();
-
-protected:
-  std::unique_ptr<SQLiteDatabase> db;
-
+  void populate_db_schema();
   void populate_genotype_table();
   void populate_admin_level_table();
   void populate_location_admin_map_table();
 
-  void populate_db_schema();
+  // Utility methods for table names
+  std::string get_site_table_name(int level_id) const;
+  std::string get_genome_table_name(int level_id) const;
 
-  virtual void monthly_report_genome_data(int monthId) = 0;
-  virtual void monthly_report_site_data(int monthId) = 0;
+protected:
+  // Database connection
+  std::unique_ptr<SQLiteDatabase> db;
 
-  // Modify insert methods to take admin level ID as parameter
-  void insert_monthly_site_data(int level_id, const std::vector<std::string> &siteData);
-  void insert_monthly_genome_data(int level_id, const std::vector<std::string> &genomeData);
+  // Virtual methods to be implemented by derived classes
+  virtual void monthly_report_genome_data(int month_id) = 0;
+  virtual void monthly_report_site_data(int month_id) = 0;
+
+  // Data insertion helpers
+  void insert_monthly_site_data(int level_id, const std::vector<std::string> &site_data);
+  void insert_monthly_genome_data(int level_id, const std::vector<std::string> &genome_data);
   
-  // Get number of admin levels
+  // Utility method
   int get_admin_level_count() const;
 
 public:
   // Constructor and destructor
   SQLiteDbReporter() = default;
+  ~SQLiteDbReporter() override = default;
+  
+  // Delete copy and move operations
   SQLiteDbReporter(const SQLiteDbReporter &) = delete;
   SQLiteDbReporter(SQLiteDbReporter &&) = delete;
   SQLiteDbReporter &operator=(const SQLiteDbReporter &) = delete;
   SQLiteDbReporter &operator=(SQLiteDbReporter &&) = delete;
-  ~SQLiteDbReporter() override = default;
 
-  // Initialize the reporter with job number and path
-  void initialize(int jobNumber, const std::string &path) override;
-
-  // Basic declarations for before run and begin time step
+  // Reporter interface implementation
+  void initialize(int job_number, const std::string &path) override;
   void before_run() override {}
   void begin_time_step() override {}
-
-  // Overridden functions for monthly reporting and post-run cleanup
   void monthly_report() override;
-  // With the new Database class, the database connection will automatically be
-  // closed when the Database object is destroyed. Therefore, no explicit action
-  // is required here. If there are other cleanup actions to perform, they can
-  // be added here.
   void after_run() override {}
 };
 
-#endif
+#endif // SQLITEDBREPORTER_H

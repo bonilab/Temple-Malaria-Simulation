@@ -39,11 +39,12 @@ Version 4.2.0 introduces flexible multi-administrative boundaries support, allow
 6. Multi-Level Admin Reporting:
    - SQLiteMonthlyReporter now reports data for all administrative levels
    - Each admin level has its own dedicated database tables:
-     - `monthlysitedata_[level_name]` - Site data aggregated by admin level
-     - `monthlygenomedata_[level_name]` - Genome data aggregated by admin level
+     - `monthly_site_data_[level_name]` - Site data aggregated by admin level
+     - `monthly_genome_data_[level_name]` - Genome data aggregated by admin level
    - Maintains backward compatibility with original district-level reporting
    - Performance optimizations for multiple level reporting
    - Consistent data aggregation methodology across all admin levels
+   - Standardized table and column naming conventions using snake_case
 
 ## 🚧 Ongoing Improvements
 
@@ -112,19 +113,19 @@ vector<int> get_locations_in_unit(string level_name, int unit); // Get locations
 The multi-administrative level reporting system has been implemented in the SQLiteDbReporter with a flexible database structure:
 
 1. Core Tables:
-   - `monthlydata` - Stores simulation time information (days elapsed, model time, seasonal factor)
+   - `monthly_data` - Stores simulation time information (days elapsed, model time, seasonal factor)
    - `genotype` - Stores genotype definitions and their identifiers
    - `admin_level` - Records all available administrative level names and IDs
    - `location_admin_map` - Maps locations to their respective admin units across all administrative levels
 
 2. Admin Level-Specific Tables:
    Each administrative level has its own dedicated tables with naming convention:
-   - `monthlysitedata_[level_name]` - Epidemiological data aggregated by admin unit
-   - `monthlygenomedata_[level_name]` - Genomic data aggregated by admin unit
+   - `monthly_site_data_[level_name]` - Epidemiological data aggregated by admin unit
+   - `monthly_genome_data_[level_name]` - Genomic data aggregated by admin unit
 
 3. Table Relationships:
-   - Each admin-level table references `monthlydata` through `monthlydataid`
-   - Genome data tables reference both `monthlydata` and `genotype` tables
+   - Each admin-level table references `monthly_data` through `monthly_data_id`
+   - Genome data tables reference both `monthly_data` and `genotype` tables
    - `location_admin_map` references `admin_level` to maintain data integrity
 
 4. Key Data Elements:
@@ -136,8 +137,126 @@ The multi-administrative level reporting system has been implemented in the SQLi
    - Indexed lookups for admin unit identification
    - Efficient data aggregation across administrative boundaries
    - Optimized data insertion with prepared statements
+   - Standardized snake_case naming convention for all tables and columns
 
 This schema design allows for consistent reporting across any number of administrative levels while maintaining backward compatibility with the legacy district-based reporting system.
+
+## Full Database Schema
+
+### Table: `monthly_data`
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT | Unique identifier for monthly data entry |
+| days_elapsed | INTEGER | NOT NULL | Days elapsed in the simulation |
+| model_time | INTEGER | NOT NULL | Calendar timestamp of simulation time |
+| seasonal_factor | INTEGER | NOT NULL | Seasonal transmission factor |
+
+### Table: `genotype`
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| id | INTEGER | PRIMARY KEY | Unique identifier for parasite genotype |
+| name | TEXT | NOT NULL | String representation of genotype |
+
+### Table: `admin_level`
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| id | INTEGER | PRIMARY KEY | Unique identifier for administrative level |
+| name | TEXT | NOT NULL | Name of the administrative level (e.g., "district", "province") |
+
+### Table: `location_admin_map`
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| id | INTEGER | PRIMARY KEY AUTOINCREMENT | Unique identifier for mapping entry |
+| location_id | INTEGER | NOT NULL | ID of the location |
+| admin_level_id | INTEGER | NOT NULL | ID of the administrative level |
+| admin_unit_id | INTEGER | NOT NULL | ID of the administrative unit within the level |
+
+#### Indexes
+
+| Name | Columns | Type |
+|------|---------|------|
+| idx_admin_unit | admin_level_id, admin_unit_id | INDEX |
+| idx_location_admin | location_id, admin_level_id | UNIQUE |
+
+#### Foreign Keys
+
+| Column | References |
+|--------|------------|
+| admin_level_id | admin_level(id) |
+
+### Table: `monthly_site_data_[level_name]`
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| monthly_data_id | INTEGER | NOT NULL | Reference to monthly_data entry |
+| location_id | INTEGER | NOT NULL | ID of the administrative unit |
+| population | INTEGER | NOT NULL | Total population |
+| clinical_episodes | INTEGER | NOT NULL | Total clinical malaria episodes |
+| clinical_episodes_by_age_class_*_* | INTEGER | - | Clinical episodes by age class |
+| treatments | INTEGER | NOT NULL | Total treatments administered |
+| treatment_failures | INTEGER | NOT NULL | Treatment failures |
+| eir | REAL | NOT NULL | Entomological Inoculation Rate |
+| pfpr_under5 | REAL | NOT NULL | Parasite prevalence in under 5 years |
+| pfpr_2to10 | REAL | NOT NULL | Parasite prevalence in 2-10 years |
+| pfpr_all | REAL | NOT NULL | Overall parasite prevalence |
+| infected_individuals | INTEGER | - | Number of infected individuals |
+| non_treatment | INTEGER | NOT NULL | Non-treatment cases |
+| under5_treatment | INTEGER | NOT NULL | Treatments for under 5 years |
+| over5_treatment | INTEGER | NOT NULL | Treatments for over 5 years |
+
+#### Primary Key
+
+| Columns |
+|---------|
+| monthly_data_id, location_id |
+
+#### Foreign Keys
+
+| Column | References |
+|--------|------------|
+| monthly_data_id | monthly_data(id) |
+
+### Table: `monthly_genome_data_[level_name]`
+
+#### Columns
+
+| Name | Type | Constraints | Description |
+|------|------|-------------|-------------|
+| monthly_data_id | INTEGER | NOT NULL | Reference to monthly_data entry |
+| location_id | INTEGER | NOT NULL | ID of the administrative unit |
+| genome_id | INTEGER | NOT NULL | Reference to genotype ID |
+| occurrences | INTEGER | NOT NULL | Total occurrences of genotype |
+| clinical_occurrences | INTEGER | NOT NULL | Clinical occurrences of genotype |
+| occurrences_0to5 | INTEGER | NOT NULL | Occurrences in 0-5 age group |
+| occurrences_2to10 | INTEGER | NOT NULL | Occurrences in 2-10 age group |
+| weighted_occurrences | REAL | NOT NULL | Weighted occurrences accounting for density |
+
+#### Primary Key
+
+| Columns |
+|---------|
+| monthly_data_id, genome_id, location_id |
+
+#### Foreign Keys
+
+| Column | References |
+|--------|------------|
+| monthly_data_id | monthly_data(id) |
+| genome_id | genotype(id) |
 
 ## Technical Requirements
 - C++17 compatible compiler
@@ -192,13 +311,13 @@ if (spatial_data.has_admin_level("province")) {
 5. Access multi-level reports in the SQLite database:
 ```sql
 -- Get data for district level
-SELECT * FROM monthlysitedata_district;
+SELECT * FROM monthly_site_data_district;
 
 -- Get data for province level
-SELECT * FROM monthlysitedata_province;
+SELECT * FROM monthly_site_data_province;
 
 -- Get data for specific unit in a specific level
-SELECT * FROM monthlysitedata_province WHERE locationid = 3;
+SELECT * FROM monthly_site_data_province WHERE location_id = 3;
 ```
 
 This new API provides a consistent interface for working with any administrative level while maintaining backward compatibility through the "district" level name.

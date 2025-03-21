@@ -87,7 +87,7 @@ void SQLiteDbReporter::create_admin_level_tables() {
     auto agFrom = ndx == 0 ? 0 : Model::CONFIG->age_structure()[ndx - 1];
     auto agTo = Model::CONFIG->age_structure()[ndx];
     ageClassColumns +=
-        fmt::format("clinicalepisodes_by_age_class_{}_{}, ", agFrom, agTo);
+        fmt::format("clinical_episodes_by_age_class_{}_{}, ", agFrom, agTo);
   }
 
   // Create tables for each admin level
@@ -100,24 +100,24 @@ void SQLiteDbReporter::create_admin_level_tables() {
     std::string createSiteDataTable = 
       fmt::format(R""""(
         CREATE TABLE IF NOT EXISTS {} (
-            monthlydataid INTEGER NOT NULL,
-            locationid INTEGER NOT NULL,
+            monthly_data_id INTEGER NOT NULL,
+            location_id INTEGER NOT NULL,
             population INTEGER NOT NULL,
-            clinicalepisodes INTEGER NOT NULL, )"""", site_table_name)
+            clinical_episodes INTEGER NOT NULL, )"""", site_table_name)
       + ageClassColumns +
       R""""(
             treatments INTEGER NOT NULL,
-            treatmentfailures INTEGER NOT NULL,
+            treatment_failures INTEGER NOT NULL,
             eir REAL NOT NULL,
-            pfprunder5 REAL NOT NULL,
-            pfpr2to10 REAL NOT NULL,
-            pfprall REAL NOT NULL,
-            infectedindividuals INTEGER,
-            nontreatment INTEGER NOT NULL,
-            under5treatment INTEGER NOT NULL,
-            over5treatment INTEGER NOT NULL,
-            PRIMARY KEY (monthlydataid, locationid),
-            FOREIGN KEY (monthlydataid) REFERENCES monthlydata(id)
+            pfpr_under5 REAL NOT NULL,
+            pfpr_2to10 REAL NOT NULL,
+            pfpr_all REAL NOT NULL,
+            infected_individuals INTEGER,
+            non_treatment INTEGER NOT NULL,
+            under5_treatment INTEGER NOT NULL,
+            over5_treatment INTEGER NOT NULL,
+            PRIMARY KEY (monthly_data_id, location_id),
+            FOREIGN KEY (monthly_data_id) REFERENCES monthly_data(id)
         );
       )"""";
     
@@ -125,17 +125,17 @@ void SQLiteDbReporter::create_admin_level_tables() {
     std::string createGenomeDataTable = 
       fmt::format(R""""(
         CREATE TABLE IF NOT EXISTS {} (
-            monthlydataid INTEGER NOT NULL,
-            locationid INTEGER NOT NULL,
-            genomeid INTEGER NOT NULL,
+            monthly_data_id INTEGER NOT NULL,
+            location_id INTEGER NOT NULL,
+            genome_id INTEGER NOT NULL,
             occurrences INTEGER NOT NULL,
-            clinicaloccurrences INTEGER NOT NULL,
-            occurrences0to5 INTEGER NOT NULL,
-            occurrences2to10 INTEGER NOT NULL,
-            weightedoccurrences REAL NOT NULL,
-            PRIMARY KEY (monthlydataid, genomeid, locationid),
-            FOREIGN KEY (genomeid) REFERENCES genotype(id),
-            FOREIGN KEY (monthlydataid) REFERENCES monthlydata(id)
+            clinical_occurrences INTEGER NOT NULL,
+            occurrences_0to5 INTEGER NOT NULL,
+            occurrences_2to10 INTEGER NOT NULL,
+            weighted_occurrences REAL NOT NULL,
+            PRIMARY KEY (monthly_data_id, genome_id, location_id),
+            FOREIGN KEY (genome_id) REFERENCES genotype(id),
+            FOREIGN KEY (monthly_data_id) REFERENCES monthly_data(id)
         );
       )"""", genome_table_name);
     
@@ -146,18 +146,18 @@ void SQLiteDbReporter::create_admin_level_tables() {
       
       // Create insert query prefixes for this admin level
       insert_site_query_prefixes_[level_id] = 
-        fmt::format(" INSERT INTO {} (MonthlyDataId, LocationId, "
-          "Population, ClinicalEpisodes, ", site_table_name) 
+        fmt::format(" INSERT INTO {} (monthly_data_id, location_id, "
+          "population, clinical_episodes, ", site_table_name) 
         + ageClassColumns + 
-        " Treatments, EIR, PfPrUnder5, PfPr2to10, PfPrAll, infectedindividuals, TreatmentFailures,"
-        " NonTreatment, Under5Treatment, Over5Treatment) VALUES";
+        " treatments, eir, pfpr_under5, pfpr_2to10, pfpr_all, infected_individuals, treatment_failures,"
+        " non_treatment, under5_treatment, over5_treatment) VALUES";
       
       insert_genome_query_prefixes_[level_id] = 
         fmt::format(R"""(
           INSERT INTO {} 
-          (MonthlyDataId, LocationId, GenomeId, Occurrences, 
-          ClinicalOccurrences, Occurrences0to5, Occurrences2to10, 
-          WeightedOccurrences) 
+          (monthly_data_id, location_id, genome_id, occurrences, 
+          clinical_occurrences, occurrences_0to5, occurrences_2to10, 
+          weighted_occurrences) 
           VALUES 
         )""", genome_table_name);
       
@@ -212,11 +212,11 @@ void SQLiteDbReporter::populate_location_admin_map_table() {
 void SQLiteDbReporter::populate_db_schema() {
   // Create the table schema
   const std::string createMonthlyData = R""""(
-    CREATE TABLE IF NOT EXISTS monthlydata (
+    CREATE TABLE IF NOT EXISTS monthly_data (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        dayselapsed INTEGER NOT NULL,
-        modeltime INTEGER NOT NULL,
-        seasonalfactor INTEGER NOT NULL
+        days_elapsed INTEGER NOT NULL,
+        model_time INTEGER NOT NULL,
+        seasonal_factor INTEGER NOT NULL
     );
   )"""";
 
@@ -303,7 +303,7 @@ void SQLiteDbReporter::initialize(int jobNumber, const std::string &path) {
     auto agFrom = ndx == 0 ? 0 : Model::CONFIG->age_structure()[ndx - 1];
     auto agTo = Model::CONFIG->age_structure()[ndx];
     ageClassColumns +=
-        fmt::format("clinicalepisodes_by_age_class_{}_{}, ", agFrom, agTo);
+        fmt::format("clinical_episodes_by_age_class_{}_{}, ", agFrom, agTo);
   }
 }
 
@@ -349,11 +349,11 @@ void SQLiteDbReporter::insert_monthly_genome_data(int level_id,
 }
 
 std::string SQLiteDbReporter::get_site_table_name(int level_id) const {
-  return "monthlysitedata_" + SpatialData::get_instance().get_admin_level_name(level_id);
+  return "monthly_site_data_" + SpatialData::get_instance().get_admin_level_name(level_id);
 }
 
 std::string SQLiteDbReporter::get_genome_table_name(int level_id) const {
-  return "monthlygenomedata_" + SpatialData::get_instance().get_admin_level_name(level_id);
+  return "monthly_genome_data_" + SpatialData::get_instance().get_admin_level_name(level_id);
 }
 
 const std::string insert_location_admin_map_query_ =

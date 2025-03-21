@@ -109,45 +109,35 @@ vector<int> get_locations_in_unit(string level_name, int unit); // Get locations
 ```
 
 ### Reporting Database Schema
-Each administrative level now has dedicated database tables:
+The multi-administrative level reporting system has been implemented in the SQLiteDbReporter with a flexible database structure:
 
-```sql
-CREATE TABLE monthlysitedata_[level_name] (
-    monthlydataid INTEGER NOT NULL,
-    locationid INTEGER NOT NULL,  -- This is the admin unit ID for this level
-    population INTEGER NOT NULL,
-    clinicalepisodes INTEGER NOT NULL,
-    -- Other fields...
-    PRIMARY KEY (monthlydataid, locationid)
-);
+1. Core Tables:
+   - `monthlydata` - Stores simulation time information (days elapsed, model time, seasonal factor)
+   - `genotype` - Stores genotype definitions and their identifiers
+   - `admin_level` - Records all available administrative level names and IDs
+   - `location_admin_map` - Maps locations to their respective admin units across all administrative levels
 
-CREATE TABLE monthlygenomedata_[level_name] (
-    monthlydataid INTEGER NOT NULL,
-    locationid INTEGER NOT NULL,  -- This is the admin unit ID for this level
-    genomeid INTEGER NOT NULL,
-    -- Other fields...
-    PRIMARY KEY (monthlydataid, genomeid, locationid)
-);
-```
+2. Admin Level-Specific Tables:
+   Each administrative level has its own dedicated tables with naming convention:
+   - `monthlysitedata_[level_name]` - Epidemiological data aggregated by admin unit
+   - `monthlygenomedata_[level_name]` - Genomic data aggregated by admin unit
 
-Where `[level_name]` is the name of the administrative level as defined in your configuration. For example:
-- `monthlysitedata_district` - For district-level data
-- `monthlysitedata_province` - For province-level data
-- `monthlysitedata_region` - For region-level data
+3. Table Relationships:
+   - Each admin-level table references `monthlydata` through `monthlydataid`
+   - Genome data tables reference both `monthlydata` and `genotype` tables
+   - `location_admin_map` references `admin_level` to maintain data integrity
 
-This naming convention makes it easier to identify which table corresponds to which administrative level when querying the database.
+4. Key Data Elements:
+   - Site data includes: population counts, clinical episodes by age class, treatment statistics, EIR, prevalence metrics (PfPR)
+   - Genome data includes: occurrence counts, clinical occurrences, age-stratified occurrences, weighted occurrences
+   - Admin level mapping includes bidirectional relationships between locations and administrative units
 
-### Validation Rules
-1. Mandatory Requirements:
-   - Valid raster files with consistent dimensions
-   - Unit IDs must start from 0 or 1
-   - No gaps in unit ID sequence
+5. Performance Optimizations:
+   - Indexed lookups for admin unit identification
+   - Efficient data aggregation across administrative boundaries
+   - Optimized data insertion with prepared statements
 
-2. Error Handling:
-   - Comprehensive validation of raster files
-   - Registration validation
-   - Dimension consistency checks
-   - Unit ID range validation
+This schema design allows for consistent reporting across any number of administrative levels while maintaining backward compatibility with the legacy district-based reporting system.
 
 ## Technical Requirements
 - C++17 compatible compiler

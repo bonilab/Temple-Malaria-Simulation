@@ -17,6 +17,12 @@ private:
   const std::string insert_genotype_query_ =
       "INSERT INTO genotype (id, name) VALUES (?, ?);";
 
+  const std::string insert_admin_level_query_ =
+      "INSERT INTO admin_level (id, name) VALUES (?, ?);";
+      
+  const std::string insert_location_admin_map_query_ =
+      "INSERT INTO location_admin_map (location_id, admin_level_id, admin_unit_id) VALUES (?, ?, ?);";
+
   const std::string insert_common_query_ = R""""(
   INSERT INTO MonthlyData (DaysElapsed, ModelTime, SeasonalFactor)
   VALUES (?, ?, ?)
@@ -42,6 +48,8 @@ protected:
   std::unique_ptr<SQLiteDatabase> db;
 
   void populate_genotype_table();
+  void populate_admin_level_table();
+  void populate_location_admin_map_table();
 
   void populate_db_schema();
 

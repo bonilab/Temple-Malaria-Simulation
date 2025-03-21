@@ -183,6 +183,12 @@ public:
     const std::vector<std::string>& get_level_names() const { return id_to_name; }
 
     /**
+     * @brief Get the number of administrative levels
+     * @return The number of administrative levels
+     */
+    int get_level_count() const { return id_to_name.size(); }
+
+    /**
      * @brief Get the ID of an administrative level
      * @param level_name The name of the administrative level
      * @return The ID of the administrative level

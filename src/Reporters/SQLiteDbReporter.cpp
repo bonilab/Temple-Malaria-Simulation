@@ -42,6 +42,42 @@ void SQLiteDbReporter::populate_genotype_table() {
   }
 }
 
+// Function to populate the 'admin_level' table in the database
+void SQLiteDbReporter::populate_admin_level_table() {
+  try {
+    // Clear the admin_level table
+    db->execute("DELETE FROM admin_level;");
+
+    // Prepare the bulk query
+    auto* stmt = db->prepare(insert_admin_level_query_);
+
+    // Get admin level names from SpatialData
+    auto admin_levels = SpatialData::get_instance().get_admin_level_manager()->get_level_names();
+
+    if (admin_levels.empty()) {
+      LOG(WARNING) << "No admin levels found. Skipping admin_level table population.";
+      return;
+    }
+
+    for (size_t id = 0; id < admin_levels.size(); id++) {
+      // Bind values to the prepared statement
+      sqlite3_bind_int(stmt, 1, id);
+      sqlite3_bind_text(stmt, 2, admin_levels[id].c_str(), -1, SQLITE_STATIC);
+
+      if (sqlite3_step(stmt) != SQLITE_DONE) {
+        throw std::runtime_error("Error executing INSERT statement for admin_level");
+      }
+
+      sqlite3_reset(stmt);  // Reset the statement for the next iteration
+    }
+
+    sqlite3_finalize(stmt);  // Finalize the statement
+
+  } catch (const std::exception &ex) {
+    LOG(FATAL) << __FUNCTION__ << "-" << ex.what();
+  }
+}
+
 // Function to create tables for each admin level
 void SQLiteDbReporter::create_admin_level_tables() {
   auto admin_levels = SpatialData::get_instance().get_admin_level_manager()->get_level_names();
@@ -131,6 +167,46 @@ void SQLiteDbReporter::create_admin_level_tables() {
   }
 }
 
+// Function to populate the 'location_admin_map' table in the database
+void SQLiteDbReporter::populate_location_admin_map_table() {
+  try {
+    // Clear the table
+    db->execute("DELETE FROM location_admin_map;");
+
+    // Prepare the bulk query
+    auto* stmt = db->prepare(insert_location_admin_map_query_);
+
+    auto& spatial_data = SpatialData::get_instance();
+    auto& location_db = Model::CONFIG->location_db();
+    auto admin_level_manager = spatial_data.get_admin_level_manager();
+    
+    // For each location in the location database
+    for (int location_id = 0; location_id < location_db.size(); location_id++) {
+      // For each admin level
+      for (int admin_level_id = 0; admin_level_id < admin_level_manager->get_level_count(); admin_level_id++) {
+        // Get admin unit ID for this location at this admin level
+        auto admin_unit_id = spatial_data.get_admin_unit(admin_level_id, location_id);
+        
+        // Bind values to the prepared statement
+        sqlite3_bind_int(stmt, 1, location_id);
+        sqlite3_bind_int(stmt, 2, admin_level_id);
+        sqlite3_bind_int(stmt, 3, admin_unit_id);
+
+        if (sqlite3_step(stmt) != SQLITE_DONE) {
+          throw std::runtime_error("Error executing INSERT statement for location_admin_map");
+        }
+
+        sqlite3_reset(stmt);  // Reset the statement for the next iteration
+      }
+    }
+
+    sqlite3_finalize(stmt);  // Finalize the statement
+
+  } catch (const std::exception &ex) {
+    LOG(ERROR) << __FUNCTION__ << "-" << ex.what();
+  }
+}
+
 // Function to create the database schema
 // This sets up the necessary tables in the database
 void SQLiteDbReporter::populate_db_schema() {
@@ -151,11 +227,32 @@ void SQLiteDbReporter::populate_db_schema() {
     );
   )"""";
 
+  const std::string createAdminLevel = R""""(
+    CREATE TABLE IF NOT EXISTS admin_level (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL
+    );
+  )"""";
+  
+  const std::string createLocationAdminMap = R""""(
+    CREATE TABLE IF NOT EXISTS location_admin_map (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        location_id INTEGER NOT NULL,
+        admin_level_id INTEGER NOT NULL,
+        admin_unit_id INTEGER NOT NULL,
+        FOREIGN KEY (admin_level_id) REFERENCES admin_level(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_admin_unit ON location_admin_map (admin_level_id, admin_unit_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_location_admin ON location_admin_map (location_id, admin_level_id);
+  )"""";
+
   try {
     TransactionGuard tx(db.get());
     // Use the Database class to execute SQL statements
     db->execute(createMonthlyData);
     db->execute(createGenotype);
+    db->execute(createAdminLevel);
+    db->execute(createLocationAdminMap);
     
     // Create tables for all admin levels
     create_admin_level_tables();
@@ -197,6 +294,9 @@ void SQLiteDbReporter::initialize(int jobNumber, const std::string &path) {
   populate_db_schema();
   // populate the genotype table
   populate_genotype_table();
+  // populate the admin level table
+  populate_admin_level_table();
+  populate_location_admin_map_table();
 
   std::string ageClassColumns;
   for (auto ndx = 0; ndx < Model::CONFIG->age_structure().size(); ndx++) {
@@ -255,4 +355,7 @@ std::string SQLiteDbReporter::get_site_table_name(int level_id) const {
 std::string SQLiteDbReporter::get_genome_table_name(int level_id) const {
   return "monthlygenomedata_" + SpatialData::get_instance().get_admin_level_name(level_id);
 }
+
+const std::string insert_location_admin_map_query_ =
+      "INSERT INTO location_admin_map (location_id, admin_level_id, admin_unit_id) VALUES (?, ?, ?);";
 

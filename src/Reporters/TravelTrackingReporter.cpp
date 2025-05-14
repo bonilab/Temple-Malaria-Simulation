@@ -1,12 +1,13 @@
+#include "GIS/SpatialData.h"
 #ifdef ENABLE_TRAVEL_TRACKING
-#include "TravelTrackingReporter.h"
-
 #include "Core/Config/Config.h"
 #include "Model.h"
 #include "Population/Population.h"
 #include "Population/Properties/PersonIndexAll.h"
+#include "TravelTrackingReporter.h"
 
-void TravelTrackingReporter::initialize(int job_number, const std::string &path) {
+void TravelTrackingReporter::initialize(int job_number,
+                                        const std::string &path) {
   output_file.open(fmt::format("{}travel_tracking_{}.csv", path, job_number));
 }
 
@@ -42,24 +43,26 @@ void TravelTrackingReporter::after_run() {
   // percentage_cross_district_last_60_days,
   // percentage_cross_district_last_90_days
 
-  // collect data
-  auto &district_lookup = SpatialData::get_instance().district_lookup();
+  const auto* boundary = SpatialData::get_instance().get_boundary("district");
+  const auto vector_size = boundary->max_unit_id + 1;
+  const auto min_district = boundary->min_unit_id;
+  const auto max_district = boundary->max_unit_id;
 
-  auto number_of_districts = SpatialData::get_instance().get_district_count();
-  std::vector<int> population(number_of_districts, 0);
-  std::vector<int> traveled_last_30_days(number_of_districts, 0);
-  std::vector<int> traveled_last_60_days(number_of_districts, 0);
-  std::vector<int> traveled_last_90_days(number_of_districts, 0);
+  std::vector<int> population(vector_size, 0);
+  std::vector<int> traveled_last_30_days(vector_size, 0);
+  std::vector<int> traveled_last_60_days(vector_size, 0);
+  std::vector<int> traveled_last_90_days(vector_size, 0);
 
-  std::vector<int> cross_district_last_30_days(number_of_districts, 0);
-  std::vector<int> cross_district_last_60_days(number_of_districts, 0);
-  std::vector<int> cross_district_last_90_days(number_of_districts, 0);
+  std::vector<int> cross_district_last_30_days(vector_size, 0);
+  std::vector<int> cross_district_last_60_days(vector_size, 0);
+  std::vector<int> cross_district_last_90_days(vector_size, 0);
 
   auto current_time = Model::SCHEDULER->current_time();
   auto* all_person_index =
       Model::POPULATION->get_person_index<PersonIndexAll>();
   for (auto* person : all_person_index->vPerson()) {
-    auto district = district_lookup[person->location()];
+    auto district = SpatialData::get_instance().get_admin_unit(
+        "district", person->location());
     population[district]++;
 
     if (person->day_that_last_trip_was_initiated() > current_time - 30) {
@@ -95,36 +98,33 @@ void TravelTrackingReporter::after_run() {
       "percentage_cross_district_last_60_days",
       "percentage_cross_district_last_90_days");
 
-  for (auto district = 0; district < number_of_districts; district++) {
+  for (auto district = min_district; district <= max_district; district++) {
     output_file << fmt::format(
-        "{},{},{},{},{},{},{},{}\n",
-        SpatialData::get_instance().adjust_simulation_district_to_raster_index(
-            district),
-        population[district],
+        "{},{},{},{},{},{},{},{}\n", district, population[district],
         population[district] == 0
             ? 0
             : static_cast<float>(traveled_last_30_days[district])
-                  / population[district],
+                  / static_cast<float>(population[district]),
         population[district] == 0
             ? 0
             : static_cast<float>(traveled_last_60_days[district])
-                  / population[district],
+                  / static_cast<float>(population[district]),
         population[district] == 0
             ? 0
             : static_cast<float>(traveled_last_90_days[district])
-                  / population[district],
+                  / static_cast<float>(population[district]),
         population[district] == 0
             ? 0
             : static_cast<float>(cross_district_last_30_days[district])
-                  / population[district],
+                  / static_cast<float>(population[district]),
         population[district] == 0
             ? 0
             : static_cast<float>(cross_district_last_60_days[district])
-                  / population[district],
+                  / static_cast<float>(population[district]),
         population[district] == 0
             ? 0
             : static_cast<float>(cross_district_last_90_days[district])
-                  / population[district]);
+                  / static_cast<float>(population[district]));
   }
 
   // close the file

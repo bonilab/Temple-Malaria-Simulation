@@ -43,9 +43,9 @@ void AgeBandReporter::initialize(int job_number, const std::string &path) {
       << "Logging of age-banded blood slide prevalence will start at model day "
       << start_recording;
 
-
   // warning log as "district" used is deprecated
-  LOG(WARNING) << "The use of 'district' is deprecated. Please use the new multi-administrative boundary system.";
+  LOG(WARNING) << "The use of 'district' is deprecated. Please use the new "
+                  "multi-administrative boundary system.";
 
   // Build a lookup for location to district
   for (auto loc = 0; loc < Model::CONFIG->number_of_locations(); loc++) {
@@ -77,7 +77,8 @@ void AgeBandReporter::monthly_report() {
 
   // Prepare some values
   auto age_classes = Model::CONFIG->number_of_age_classes();
-  auto districts = SpatialData::get_instance().get_boundary("district")->unit_count;
+  auto districts =
+      SpatialData::get_instance().get_boundary("district")->unit_count;
   std::vector<std::vector<int>> population(districts,
                                            std::vector<int>(age_classes));
   std::vector<std::vector<double>> prevalence(districts,

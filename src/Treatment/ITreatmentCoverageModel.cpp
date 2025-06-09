@@ -13,6 +13,9 @@
 #include "SteadyTCM.hxx"
 #include "easylogging++.h"
 
+
+// previous approach (before change to base treatment) (Uncomment if needed)
+/*
 double ITreatmentCoverageModel::get_probability_to_be_treated(
     const int &location, const int &age) {
   assert(location >= 0);  // Location should not be less than zero
@@ -26,6 +29,35 @@ double ITreatmentCoverageModel::get_probability_to_be_treated(
   return (age < 5) ? p_treatment_less_than_5[location]
                    : p_treatment_more_than_5[location];
 }
+*/
+
+// New code for age specific treatment coverage (ASTC) (May 2025)
+double ITreatmentCoverageModel::get_probability_to_be_treated(
+    const int &location, const int &age, std::vector<int> treatment_age_classes, std::vector<double>treatment_adjustments) {
+
+  assert(location >= 0);  // Location should not be less than zero
+  assert(static_cast<std::size_t>(location) < p_treatment_base.size());  // Location is greater than the array size
+
+
+
+  double base_treatment = p_treatment_base.at(location);
+
+for (size_t i=0; i< treatment_age_classes.size(); i++) {
+  double weight;
+  if(age <= treatment_age_classes[i]) {
+    weight = treatment_adjustments[i];
+
+    return base_treatment * weight;  // Return the adjusted treatment probability
+  }
+  }
+
+  throw std::runtime_error(
+    "Treatment Coverage for age: " + std::to_string(age) +
+    " and location: " + std::to_string(location) +
+    " cannot be determined"
+);
+
+ }
 
 ITreatmentCoverageModel* ITreatmentCoverageModel::build_steady_tcm(
     const YAML::Node &node, Config* config) {

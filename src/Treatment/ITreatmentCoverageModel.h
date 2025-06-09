@@ -35,6 +35,9 @@ public:
   std::vector<double> p_treatment_less_than_5;  // TODO Make this a property
   std::vector<double> p_treatment_more_than_5;  // TODO Make this a property
 
+  // Added for ASTC May 2025
+  std::vector<double> p_treatment_base;  // Base treatment level
+
   ITreatmentCoverageModel() : starting_time_{0} {}
 
   virtual ~ITreatmentCoverageModel() = default;
@@ -42,8 +45,12 @@ public:
   // Get the probability to be treated based upon the individual's location and
   // age, for the default implementation we are presuming under-5 (< 5) or
   // over-5.
-  virtual double get_probability_to_be_treated(const int &location,
-                                               const int &age);
+  // virtual double get_probability_to_be_treated(const int &location,
+  //                                              const int &age); // previous signature
+
+  // Added for ASTC May 2025
+  virtual double get_probability_to_be_treated(
+    const int &location, const int &age, std::vector<int> treatment_age_classes, std::vector<double>treatment_adjustments);  // new signtaure (added for ASTC May 2025)
 
   // Monthly update function for the treatment coverage model.
   virtual void monthly_update() = 0;

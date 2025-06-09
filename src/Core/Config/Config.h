@@ -167,6 +167,11 @@ public:
   virtual ~Config();
 
   void read_from_file(const std::string &config_file_name = "config.yml");
+
+  // added for ASTC May 2025
+  CONFIG_ITEM(treatment_age_classes_upper, std::vector<int>, (std::vector<int>{5, 100}))
+  CONFIG_ITEM(treatment_adjustments, std::vector<double>, (std::vector<double>{1, 1}))
+
 };
 
 #endif /* CONFIG_H */

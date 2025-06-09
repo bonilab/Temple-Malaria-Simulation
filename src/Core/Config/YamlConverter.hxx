@@ -129,6 +129,17 @@ struct convert<std::vector<Spatial::Location>> {
               .as<float>();
     }
 
+    // added for ASTC (May 2025)
+    for (std::size_t loc = 0; loc < number_of_locations; loc++) {
+      auto input_loc = node["p_treatment_base_by_location"].size()
+                               < number_of_locations
+                           ? 0
+                           : loc;
+      location_db[loc].p_treatment_base =
+          node["p_treatment_base_by_location"][input_loc]
+              .as<float>();
+    }
+
     for (std::size_t loc = 0; loc < number_of_locations; loc++) {
       auto input_loc =
           node["beta_by_location"].size() < number_of_locations ? 0 : loc;

@@ -48,7 +48,10 @@ public:
     PrTreatmentOver5,
 
     // Number of sequential items in the type
-    Count
+    Count,
+
+    // Base treatment level (added for ASTC May 2025)
+    PrTreatmentBase
   };
 
   struct RasterInformation {
@@ -99,6 +102,9 @@ public:
   const std::string ECOCLIMATIC_RASTER = "ecoclimatic_raster";
   const std::string TREATMENT_RATE_UNDER5 = "pr_treatment_under5";
   const std::string TREATMENT_RATE_OVER5 = "pr_treatment_over5";
+
+  // added for ASTC May 2025
+  const std::string BASE_TREATMENT_RATE = "base_treatment_raster";
 
   // Add constant for the new admin boundaries configuration section
   const std::string ADMIN_BOUNDARIES = "administrative_boundaries";

@@ -55,9 +55,11 @@ void MMCReporter::monthly_report() {
   ss << Model::CONFIG->seasonal_info()->get_seasonal_factor(
       Model::SCHEDULER->calendar_date, 0)
      << Tsv::sep;
-  ss << Model::TREATMENT_COVERAGE->get_probability_to_be_treated(0, 1)
+  // ss << Model::TREATMENT_COVERAGE->get_probability_to_be_treated(0, 1) // previous approach
+  ss << Model::TREATMENT_COVERAGE->get_probability_to_be_treated(0, 1, Model::CONFIG->treatment_age_classes_upper(), Model::CONFIG->treatment_adjustments()) // added for ASTC May 2025
      << Tsv::sep;
-  ss << Model::TREATMENT_COVERAGE->get_probability_to_be_treated(0, 10)
+  // ss << Model::TREATMENT_COVERAGE->get_probability_to_be_treated(0, 10) // previous approach
+  ss << Model::TREATMENT_COVERAGE->get_probability_to_be_treated(0, 10, Model::CONFIG->treatment_age_classes_upper(), Model::CONFIG->treatment_adjustments()) // added for ASTC May 2025
      << Tsv::sep;
   ss << Model::POPULATION->size() << Tsv::sep;
   ss << group_sep;

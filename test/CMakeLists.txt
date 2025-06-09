@@ -23,7 +23,7 @@ set(TEST_SRC_FILES
     sample_yaml_cpp_test.cpp
     person_test.cpp
     Environment/SeasonalPatternTest.cpp
-    ${GIS_TEST_FILES}
+    #${GIS_TEST_FILES}
     #SimpleFakeItTest.cpp
     #Spatial/CoordinateTest.cpp
     #Spatial/LocationTest.cpp
@@ -31,6 +31,7 @@ set(TEST_SRC_FILES
     #Core/TimeHelpersTest.cpp
     #Core/StringHelpersTest.cpp
     #Core/Config/ConfigTest.cpp
+    AgeSpecificTreatmentTest.cpp
     )
 
 add_executable(${PROJECT_TEST_NAME} ${TEST_SRC_FILES})

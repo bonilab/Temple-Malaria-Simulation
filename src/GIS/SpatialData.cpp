@@ -273,6 +273,10 @@ void SpatialData::copy_raster_to_location_db(SpatialFileType type) {
         case SpatialFileType::PrTreatmentOver5:
           db[id].p_treatment_more_than_5 = raster->data[ndx][ndy];
           break;
+        // Added for ASTC May 2025
+        case SpatialFileType::PrTreatmentBase:
+          db[id].p_treatment_base = raster->data[ndx][ndy];
+          break;
         default:
           break;
       }
@@ -318,6 +322,17 @@ void SpatialData::load_files(const YAML::Node &node) {
          SpatialData::SpatialFileType::PrTreatmentOver5);
     using_raster = true;
   }
+
+  // Added for ASTC May 2025
+
+  if (node[BASE_TREATMENT_RATE]) {
+    load(node[BASE_TREATMENT_RATE].as<std::string>(),
+         SpatialData::SpatialFileType::PrTreatmentBase);
+    using_raster = true;
+  }
+
+
+
 
   if (node[DISTRICT_RASTER]) {
     load(node[DISTRICT_RASTER].as<std::string>(),
@@ -424,7 +439,30 @@ void SpatialData::load_treatment_data(const YAML::Node &node) {
               .as<float>();
     }
   }
+
+  // Added for ASTC May 2025
+  if (data[SpatialFileType::PrTreatmentBase] != nullptr){
+    //std::cout<< "base treatment raster file found"<< std::endl;
+    copy_raster_to_location_db(SpatialFileType::PrTreatmentBase);
+
+  } else {
+    if (!node["p_treatment_base_by_location"]) {
+      throw std::runtime_error("Missing base treatment rate data");
+    }
+    for (auto loc = 0ul; loc < number_of_locations; loc++) {
+      auto input_loc = node["p_treatment_base_by_location"].size()
+                               < number_of_locations
+                           ? 0
+                           : loc;
+      location_db[loc].p_treatment_base =
+          node["p_treatment_base_by_location"][input_loc]
+              .as<float>();
+    }
+  }
 }
+
+
+
 
 void SpatialData::load_location_data(const YAML::Node &node) {
   auto &location_db = Model::CONFIG->location_db();

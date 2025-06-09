@@ -119,6 +119,10 @@ void Model::build_initial_treatment_coverage() {
   for (auto &location : config_->location_db()) {
     tcm->p_treatment_less_than_5.push_back(location.p_treatment_less_than_5);
     tcm->p_treatment_more_than_5.push_back(location.p_treatment_more_than_5);
+
+    // Added for ASTC May 2025
+    tcm-> p_treatment_base.push_back(
+        location.p_treatment_base); // Base treatment coverage
   }
   set_treatment_coverage(tcm);
 }

@@ -32,6 +32,9 @@ public:
   std::unique_ptr<Coordinate> coordinate;
   std::vector<double> age_distribution;
 
+  // added for ASTC May 2025
+  float p_treatment_base;
+
 public:
   Location(int id, float latitude, float longitude, int population_size);
 

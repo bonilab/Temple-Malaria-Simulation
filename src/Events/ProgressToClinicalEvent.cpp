@@ -72,8 +72,13 @@ void ProgressToClinicalEvent::execute() {
   const auto p = Model::RANDOM->random_flat(0.0, 1.0);
 
   const auto p_treatment =
+      // Model::TREATMENT_COVERAGE->get_probability_to_be_treated(
+      //     person->location(), person->age()); // previous approach
+
       Model::TREATMENT_COVERAGE->get_probability_to_be_treated(
-          person->location(), person->age());
+          person->location(), person->age(), Model::CONFIG->treatment_age_classes_upper(), Model::CONFIG->treatment_adjustments()); // modified for ASTC (May 2025)
+
+
 
   if (p <= p_treatment) {
     // Give the individual the relevant therapy

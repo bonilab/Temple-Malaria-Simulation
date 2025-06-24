@@ -47,11 +47,11 @@ public:
     // Probability of treatment, over 5
     PrTreatmentOver5,
 
-    // Number of sequential items in the type
-    Count,
-
     // Base treatment level (added for ASTC May 2025)
-    PrTreatmentBase
+    PrTreatmentBase,
+
+    // Number of sequential items in the type
+    Count
   };
 
   struct RasterInformation {

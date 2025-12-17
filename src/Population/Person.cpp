@@ -696,12 +696,11 @@ void Person::randomly_choose_target_location() {
     // already chose
     return;
   }
-  int target_location =
-      today_target_locations_->size() == 1
-          ? today_target_locations_->front()
-          : today_target_locations_->at(static_cast<int>(
-              Model::RANDOM->random_uniform(today_target_locations_->size())));
-
+  int target_location = today_target_locations_->size() == 1
+                            ? today_target_locations_->front()
+                            : today_target_locations_->at(static_cast<int>(
+                                  Model::RANDOM->random_uniform(
+                                      today_target_locations_->size())));
 
   schedule_move_to_target_location_next_day_event(target_location);
   today_target_locations_->clear();
@@ -716,8 +715,10 @@ void Person::randomly_choose_target_location() {
     auto &spatial_data = SpatialData::get_instance();
 
     // Determine the source and destination districts for the current trip.
-    int source_district = spatial_data.location_to_district[location_];
-    int destination_district = spatial_data.location_to_district[target_location];
+    int source_district = spatial_data.get_admin_unit("district", location_);
+
+    int destination_district =
+        spatial_data.get_admin_unit("district", target_location);
 
     // If the trip crosses district boundaries, update the day of the last
     // outside-district trip to the next day from current time.

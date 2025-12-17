@@ -237,12 +237,16 @@ IStrategy* StrategyBuilder::buildDistrictMftStrategy(const YAML::Node &node,
   // them once
   std::vector<int> districts;
 
-  LOG(WARNING) << "The use of 'district' is deprecated. Please use the new multi-administrative boundary system.";
+  LOG(WARNING) << "The use of 'district' is deprecated. Please use the new "
+                  "multi-administrative boundary system.";
   // Get district ID range from SpatialData
-  const auto& spatial_data = SpatialData::get_instance();
-  const auto min_district_id = spatial_data.get_boundary("district")->min_unit_id;
-  const auto max_district_id = spatial_data.get_boundary("district")->max_unit_id;
-  const auto expected_district_count = spatial_data.get_boundary("district")->unit_count;
+  const auto &spatial_data = SpatialData::get_instance();
+  const auto min_district_id =
+      spatial_data.get_boundary("district")->min_unit_id;
+  const auto max_district_id =
+      spatial_data.get_boundary("district")->max_unit_id;
+  const auto expected_district_count =
+      spatial_data.get_boundary("district")->unit_count;
 
   // Read each of the definitions
   for (auto ndx = 0; ndx < node["definitions"].size(); ndx++) {
@@ -274,7 +278,8 @@ IStrategy* StrategyBuilder::buildDistrictMftStrategy(const YAML::Node &node,
       template_mft->therapies.push_back(id);
     }
 
-    // Read the distribution percentages for the MFT and make sure they make sense
+    // Read the distribution percentages for the MFT and make sure they make
+    // sense
     auto sum = 0.0f;
     for (auto ndy = 0; ndy < child["distribution"].size(); ndy++) {
       auto percent = child["distribution"][ndy].as<float>();
@@ -295,9 +300,9 @@ IStrategy* StrategyBuilder::buildDistrictMftStrategy(const YAML::Node &node,
       sum += percent;
       template_mft->percentages.push_back(percent);
     }
-    if (int(sum) != 1) {
+    if (std::abs(sum - 1.0) > 1e-6) {
       LOG(ERROR) << "Distribution percentage sum does not equal 100%, reading "
-                 << ndx;
+                 << ndx << " - Sum: " << sum;
       throw std::invalid_argument(
           "Distribution percentage sum must equal 100%.");
     }
@@ -305,22 +310,25 @@ IStrategy* StrategyBuilder::buildDistrictMftStrategy(const YAML::Node &node,
     // Assign the MFT to each of the districts
     for (auto ndy = 0; ndy < child["district_ids"].size(); ndy++) {
       auto id = child["district_ids"][ndy].as<int>();
-      
+
       // Validate district ID is within valid range
       if (id < min_district_id || id > max_district_id) {
-        LOG(ERROR) << fmt::format("Invalid district ID {}, valid range is {} to {}", 
-                                 id, min_district_id, max_district_id);
+        LOG(ERROR) << fmt::format(
+            "Invalid district ID {}, valid range is {} to {}", id,
+            min_district_id, max_district_id);
         throw std::invalid_argument("District ID out of valid range");
       }
 
-      if (std::find(districts.begin(), districts.end(), id) 
+      if (std::find(districts.begin(), districts.end(), id)
           != districts.end()) {
-        LOG(ERROR) << "District " << id << " encountered a second time, reading " << ndx;
+        LOG(ERROR) << "District " << id
+                   << " encountered a second time, reading " << ndx;
         throw std::invalid_argument("District duplication detected.");
       }
 
       // Create a new copy of the MFT for this district
-      auto district_mft = std::make_unique<DistrictMftStrategy::MftStrategy>(*template_mft);
+      auto district_mft =
+          std::make_unique<DistrictMftStrategy::MftStrategy>(*template_mft);
       strategy->set_district_strategy(id, std::move(district_mft));
       districts.push_back(id);
     }
@@ -328,10 +336,13 @@ IStrategy* StrategyBuilder::buildDistrictMftStrategy(const YAML::Node &node,
     // No need to explicitly delete template_mft, unique_ptr handles cleanup
   }
 
-  // All the distributions have been read and assigned, make sure each district has one
+  // All the distributions have been read and assigned, make sure each district
+  // has one
   if (districts.size() < expected_district_count) {
-    LOG(ERROR) << fmt::format("Number of districts with MFT assigned ({}) is less than total district count ({})",
-                               districts.size(), expected_district_count);
+    LOG(ERROR) << fmt::format(
+        "Number of districts with MFT assigned ({}) is less than total "
+        "district count ({})",
+        districts.size(), expected_district_count);
     throw std::invalid_argument("Districts missing MFT assignment.");
   }
 

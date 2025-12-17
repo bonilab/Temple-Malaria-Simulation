@@ -62,7 +62,8 @@ public:
     penalty_ = node["penalty"].as<double>();
   }
 
-  // Destructor can be removed or simplified since vectors handle cleanup automatically
+  // Destructor can be removed or simplified since vectors handle cleanup
+  // automatically
   ~BurkinaFaso() override = default;
 
   void prepare() override {
@@ -71,7 +72,8 @@ public:
 
     // Allow the work to be done
     prepare_kernel();
-    AscFile* travel_raster = SpatialData::get_instance().get_raster(SpatialData::SpatialFileType::Travel);
+    AscFile* travel_raster = SpatialData::get_instance().get_raster(
+        SpatialData::SpatialFileType::Travel);
     travel = std::move(prepare_surface(travel_raster));
   }
 
@@ -89,7 +91,8 @@ public:
     // Note the population size
     auto population = v_number_of_residents_by_location[from_location];
 
-    LOG(WARNING) << "The use of 'district' is deprecated. Please use the new multi-administrative boundary system.";
+    // LOG(WARNING) << "The use of 'district' is deprecated. Please use the new
+    // multi-administrative boundary system.";
 
     // Note the source district
     auto source_district =
@@ -116,7 +119,8 @@ public:
       // If the source and the destination are both in the capital district,
       // penalize the travel by 50%
       if (source_district == capital_
-          && SpatialData::get_instance().get_admin_unit("district", destination) == capital_) {
+          && SpatialData::get_instance().get_admin_unit("district", destination)
+                 == capital_) {
         probability /= penalty_;
       }
 

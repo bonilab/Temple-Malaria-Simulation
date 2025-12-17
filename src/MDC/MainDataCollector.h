@@ -195,6 +195,12 @@ class MainDataCollector {
   // Monthly number of treatment successes by location and therapy
   PROPERTY_REF(IntVector2, monthly_treatment_success_by_location_therapy);
 
+  PROPERTY_REF(IntVector2,monthly_number_of_clinical_episode_by_location_age)
+
+  PROPERTY_REF(IntVector2,popsize_by_location_age);
+
+  PROPERTY_REF(DoubleVector2,total_immune_by_location_age);
+
 private:
   // Flag to indicate if we are recording or not
   bool recording = false;
@@ -227,7 +233,7 @@ public:
   virtual void collect_number_of_bites(const int &location,
                                        const int &number_of_bites);
 
-  virtual void collect_1_clinical_episode(const int &location,
+  virtual void collect_1_clinical_episode(const int &location, const int &age,
                                           const int &age_class);
 
   virtual void update_person_days_by_years(const int &location,

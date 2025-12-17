@@ -37,7 +37,12 @@ private:
   
   // Database schema management
   void create_all_reporting_tables();
-  void create_reporting_tables_for_level(int level_id, const std::string& ageClassColumnDefinitions, const std::string& ageClassColumns);
+  virtual void create_reporting_tables_for_level(int level_id,
+    const std::string& age_class_column_definitions,
+    const std::string& age_class_columns,
+    const std::string& age_column_definitions,
+    const std::string& age_columns
+    );
   void populate_db_schema();
   void populate_genotype_table();
   void populate_admin_level_table();

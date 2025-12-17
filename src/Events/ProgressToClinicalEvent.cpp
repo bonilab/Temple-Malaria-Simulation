@@ -67,6 +67,7 @@ void ProgressToClinicalEvent::execute() {
 
   // Statistic collect cumulative clinical episodes
   Model::MAIN_DATA_COLLECTOR->collect_1_clinical_episode(person->location(),
+                                                          person->age(),
                                                          person->age_class());
 
   const auto p = Model::RANDOM->random_flat(0.0, 1.0);

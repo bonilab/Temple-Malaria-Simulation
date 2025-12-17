@@ -222,6 +222,8 @@ void Population::initialize() {
   current_force_of_infection_by_location_parasite_type_ = DoubleVector2(
       number_of_location, DoubleVector(number_of_parasite_type, 0));
 
+  current_force_of_infection_by_location_ = DoubleVector(number_of_location, 0);
+
   interupted_feeding_force_of_infection_by_location_parasite_type_ =
       DoubleVector2(number_of_location,
                     DoubleVector(number_of_parasite_type, 0));
@@ -446,6 +448,7 @@ void Population::notify_change_in_force_of_infection(
   current_force_of_infection_by_location_parasite_type_[location]
                                                        [parasite_type_id] +=
       relative_force_of_infection;
+  current_force_of_infection_by_location_[location] += relative_force_of_infection;
 }
 
 void Population::update_force_of_infection(const int &current_time) {

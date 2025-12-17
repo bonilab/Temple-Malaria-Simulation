@@ -32,7 +32,9 @@ class Population : public Dispatcher {
   POINTER_PROPERTY(PersonIndexAll, all_persons);
 
   PROPERTY_REF(std::vector<std::vector<double> >,
-               current_force_of_infection_by_location_parasite_type);
+  current_force_of_infection_by_location_parasite_type);
+  PROPERTY_REF(std::vector<double>,
+               current_force_of_infection_by_location);
   PROPERTY_REF(std::vector<std::vector<double> >,
                interupted_feeding_force_of_infection_by_location_parasite_type);
   PROPERTY_REF(std::vector<std::vector<std::vector<double> > >,

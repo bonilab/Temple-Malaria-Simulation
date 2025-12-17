@@ -77,20 +77,54 @@ void SQLiteDbReporter::create_all_reporting_tables() {
   auto admin_levels = SpatialData::get_instance().get_admin_level_manager()->get_level_names();
   
 
-  std::string ageClassColumnDefinitions;
+  std::string age_class_column_definitions;
   for (auto ndx = 0; ndx < Model::CONFIG->age_structure().size(); ndx++) {
     auto agFrom = ndx == 0 ? 0 : Model::CONFIG->age_structure()[ndx - 1];
     auto agTo = Model::CONFIG->age_structure()[ndx];
-    ageClassColumnDefinitions +=
+    age_class_column_definitions +=
         fmt::format("clinical_episodes_by_age_class_{}_{} INTEGER, ", agFrom, agTo);
   }
 
-  std::string ageClassColumns;
+  std::string age_class_columns;
   for (auto ndx = 0; ndx < Model::CONFIG->age_structure().size(); ndx++) {
     auto agFrom = ndx == 0 ? 0 : Model::CONFIG->age_structure()[ndx - 1];
     auto agTo = Model::CONFIG->age_structure()[ndx];
-    ageClassColumns +=
+    age_class_columns +=
         fmt::format("clinical_episodes_by_age_class_{}_{}, ", agFrom, agTo);
+  }
+
+  std::string age_column_definitions;
+  for (auto age = 0; age < 80; age++) {
+    age_column_definitions +=
+        fmt::format("clinical_episodes_by_age_{} INTEGER, ", age);
+  }
+
+  for (auto age = 0; age < 80; age++) {
+    age_column_definitions +=
+        fmt::format("population_by_age_{} INTEGER, ", age);
+  }
+
+  for (auto age = 0; age < 80; age++) {
+    age_column_definitions +=
+        fmt::format("total_immune_by_age_{} REAL, ", age);
+  }
+
+  for (auto moi = 0; moi < Model::MAIN_DATA_COLLECTOR->NUMBER_OF_REPORTED_MOI; moi++) {
+    age_column_definitions += fmt::format("moi_{} INTEGER, ", moi);
+  }
+
+  std::string age_columns;
+  for (auto age = 0; age < 80; age++) {
+    age_columns += fmt::format("clinical_episodes_by_age_{}, ", age);
+  }
+  for (auto age = 0; age < 80; age++) {
+    age_columns += fmt::format("population_by_age_{}, ", age);
+  }
+  for (auto age = 0; age < 80; age++) {
+    age_columns += fmt::format("total_immune_by_age_{}, ", age);
+  }
+  for (auto moi = 0; moi < Model::MAIN_DATA_COLLECTOR->NUMBER_OF_REPORTED_MOI; moi++) {
+    age_columns += fmt::format("moi_{}, ", moi);
   }
 
   // // Include cell level in the number of levels
@@ -103,11 +137,18 @@ void SQLiteDbReporter::create_all_reporting_tables() {
   
   // Now create tables for each admin level including cell level
   for (size_t level_id = 0; level_id < admin_levels.size() + 1; level_id++) {
-    create_reporting_tables_for_level(level_id, ageClassColumnDefinitions, ageClassColumns);
+    create_reporting_tables_for_level(level_id,
+      age_class_column_definitions, age_class_columns,
+      age_column_definitions,
+      age_columns);
   }
 }
 
-void SQLiteDbReporter::create_reporting_tables_for_level(int level_id, const std::string& ageClassColumnDefinitions, const std::string& ageClassColumns) {
+void SQLiteDbReporter::create_reporting_tables_for_level(
+    int level_id, const std::string &age_class_column_definitions,
+    const std::string &age_class_columns,
+    const std::string &age_column_definitions,
+    const std::string &age_columns) {
   // Generate table names for this level
   std::string site_table_name = get_site_table_name(level_id);
   std::string genome_table_name = get_genome_table_name(level_id);
@@ -122,9 +163,11 @@ void SQLiteDbReporter::create_reporting_tables_for_level(int level_id, const std
           monthly_data_id INTEGER NOT NULL,
           {} INTEGER NOT NULL,
           population INTEGER NOT NULL,
-          clinical_episodes INTEGER NOT NULL, )"""", site_table_name, location_id_column)
-    + ageClassColumnDefinitions +
-    fmt::format(R""""(
+          clinical_episodes INTEGER NOT NULL, )"""",
+    site_table_name, location_id_column)
+        + age_class_column_definitions
+        + age_column_definitions
+        + fmt::format(R""""(
           treatments INTEGER NOT NULL,
           treatment_failures INTEGER NOT NULL,
           eir REAL NOT NULL,
@@ -135,6 +178,10 @@ void SQLiteDbReporter::create_reporting_tables_for_level(int level_id, const std
           non_treatment INTEGER NOT NULL,
           under5_treatment INTEGER NOT NULL,
           over5_treatment INTEGER NOT NULL,
+          total_number_of_bites_by_location BIGINT NOT NULL,
+          total_number_of_bites_by_location_year BIGINT NOT NULL,
+          person_days_by_location_year BIGINT NOT NULL,
+          current_foi_by_location BIGINT NOT NULL,
           PRIMARY KEY (monthly_data_id, {}),
           FOREIGN KEY (monthly_data_id) REFERENCES monthly_data(id)
       );
@@ -169,10 +216,11 @@ void SQLiteDbReporter::create_reporting_tables_for_level(int level_id, const std
     // Create insert query prefixes for this level
     insert_site_query_prefixes_[prefix_index] = 
       fmt::format("INSERT INTO {} (monthly_data_id, {}, "
-        "population, clinical_episodes, ", site_table_name, location_id_column) 
-      + ageClassColumns + 
+        "population, clinical_episodes, ", site_table_name, location_id_column)
+      + age_class_columns + age_columns +
       " treatments, eir, pfpr_under5, pfpr_2to10, pfpr_all, infected_individuals, treatment_failures,"
-      " non_treatment, under5_treatment, over5_treatment) VALUES";
+      " non_treatment, under5_treatment, over5_treatment, total_number_of_bites_by_location,"
+      " total_number_of_bites_by_location_year, person_days_by_location_year, current_foi_by_location) VALUES";
     
     insert_genome_query_prefixes_[prefix_index] = 
       fmt::format(R"""(

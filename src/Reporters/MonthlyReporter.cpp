@@ -89,6 +89,20 @@ void MonthlyReporter::monthly_report() {
        << Tsv::sep;
   }
   ss << group_sep;
+  for (std::size_t loc = 0; loc < Model::CONFIG->number_of_locations(); loc++) {
+    ss << Model::MAIN_DATA_COLLECTOR
+              ->total_number_of_bites_by_location()[loc]
+       << Tsv::sep;
+    ss << Model::MAIN_DATA_COLLECTOR
+              ->total_number_of_bites_by_location_year()[loc]
+       << Tsv::sep;
+    ss << Model::MAIN_DATA_COLLECTOR
+              ->person_days_by_location_year()[loc]
+       << Tsv::sep;
+    ss << Model::POPULATION->current_force_of_infection_by_location()[loc]
+       << Tsv::sep;
+  }
+  ss << group_sep;
 
   // including total number of positive individuals
   ReporterUtils::output_genotype_frequency3(

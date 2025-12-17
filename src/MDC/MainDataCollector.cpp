@@ -26,6 +26,9 @@
 #define IntMatrix_Locations_by_AgeClasses()        \
   IntVector2(Model::CONFIG->number_of_locations(), \
              IntVector(Model::CONFIG->number_of_age_classes(), 0))
+#define IntMatrix_Locations_by_Age()        \
+  IntVector2(Model::CONFIG->number_of_locations(), \
+  IntVector(80, 0))
 #define IntMatrix_Locations_by_Therapies()         \
   IntVector2(Model::CONFIG->number_of_locations(), \
              IntVector(Model::CONFIG->therapy_db().size(), 0))
@@ -171,6 +174,16 @@ void MainDataCollector::initialize() {
 
   current_number_of_mutation_events_ = 0;
   number_of_mutation_events_by_year_ = LongVector();
+
+  monthly_number_of_clinical_episode_by_location_age_ =
+      IntVector2(Model::CONFIG->number_of_locations(), IntVector(100, 0));
+
+  popsize_by_location_age_ =
+        IntVector2(Model::CONFIG->number_of_locations(), IntVector(80, 0));
+
+  total_immune_by_location_age_ = DoubleVector2(Model::CONFIG->number_of_locations(),
+                      DoubleVector(80, 0.0));
+
 }
 
 void MainDataCollector::perform_population_statistic() {
@@ -199,9 +212,13 @@ void MainDataCollector::perform_population_statistic() {
           double immune_value = p->immune_system()->get_latest_immune_value();
           total_immune_by_location_[loc] += immune_value;
           total_immune_by_location_age_class_[loc][ac] += immune_value;
+          int age = static_cast<int>(p->age());
+          int age_clamp = (age < 80) ? age : 79;
+          total_immune_by_location_age_[loc][age_clamp] += immune_value;
 
           int ac1 = (p->age() > 70) ? 14 : p->age() / 5;
           popsize_by_location_age_class_by_5_[loc][ac1] += 1;
+          popsize_by_location_age_[loc][age_clamp] += 1;
 
           if (hs == Person::ASYMPTOMATIC) {
             number_of_positive_by_location_[loc]++;
@@ -227,9 +244,7 @@ void MainDataCollector::perform_population_statistic() {
           int moi = p->all_clonal_parasite_populations()->size();
           if (moi > 0) {
             total_parasite_population_by_location_[loc] += moi;
-            total_parasite_population_by_location_age_group_[loc]
-                                                            [p->age_class()] +=
-                moi;
+            total_parasite_population_by_location_age_group_[loc] [p->age_class()] += moi;
             if (moi <= NUMBER_OF_REPORTED_MOI) {
               multiple_of_infection_by_location_[loc][moi - 1]++;
             }
@@ -389,13 +404,18 @@ void MainDataCollector::calculate_eir() {
   }
 }
 
-void MainDataCollector::collect_1_clinical_episode(const int &location,
+void MainDataCollector::collect_1_clinical_episode(const int &location, const int &age,
                                                    const int &age_class) {
   if (!recording) { return; }
   cumulative_clinical_episodes_by_location_[location]++;
   monthly_number_of_clinical_episode_by_location_[location]++;
   monthly_number_of_clinical_episode_by_location_age_class_[location]
                                                            [age_class]++;
+  if (age < 100) {
+    monthly_number_of_clinical_episode_by_location_age_[location][age] += 1;
+  } else {
+    monthly_number_of_clinical_episode_by_location_age_[location][99] += 1;
+  }
 }
 
 void MainDataCollector::record_1_birth(const int &location) {
@@ -677,6 +697,9 @@ void MainDataCollector::monthly_update() {
       zero_fill(monthly_treatment_failure_by_location_therapy_[location]);
       zero_fill(monthly_treatment_success_by_location_age_class_[location]);
       zero_fill(monthly_treatment_success_by_location_therapy_[location]);
+      for (int age = 0; age < 100; age++) {
+        monthly_number_of_clinical_episode_by_location_age_[location][age] = 0;
+      }
     }
   }
 }
@@ -706,5 +729,7 @@ void MainDataCollector::zero_population_statistics() {
     zero_fill(blood_slide_prevalence_by_location_age_group_by_5_[location]);
     zero_fill(blood_slide_number_by_location_age_group_by_5_[location]);
     zero_fill(multiple_of_infection_by_location_[location]);
+    zero_fill(popsize_by_location_age_[location]);
+    zero_fill(total_immune_by_location_age_[location]);
   }
 }

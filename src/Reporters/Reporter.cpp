@@ -19,6 +19,8 @@
 #include "Specialist/SeasonalImmunity.h"
 #include "easylogging++.h"
 
+#include "Reporters/SMCReporter.h" //added for SMC
+
 #ifdef ENABLE_TRAVEL_TRACKING
 #include "Reporters/TravelTrackingReporter.h"
 #endif
@@ -31,6 +33,7 @@ std::map<std::string, Reporter::ReportType> Reporter::ReportTypeMap{
     {"CellularReporter", CELLULAR_REPORTER},
     {"SeasonalImmunity", SEASONAL_IMMUNITY},
     {"AgeBand", AGE_BAND_REPORTER},
+    {"SMCReporter", SMC_REPORTER}, //added for SMC
     {"SQLiteMonthlyReporter", SQLITE_MONTHLY_REPORTER},
 #ifdef ENABLE_TRAVEL_TRACKING
     {"TravelTrackingReporter", TRAVEL_TRACKING_REPORTER},
@@ -53,6 +56,8 @@ Reporter* Reporter::MakeReport(ReportType report_type) {
       return new SeasonalImmunity();
     case AGE_BAND_REPORTER:
       return new AgeBandReporter();
+    case SMC_REPORTER: //added for SMC
+      return new SMCReporter();
     case SQLITE_MONTHLY_REPORTER:{
       auto cell_level_reporting = Model::CONFIG->cell_level_reporting();
       return new SQLiteMonthlyReporter(cell_level_reporting);

@@ -70,6 +70,9 @@ void ConfigItem<T>::set_value(const YAML::Node &node) {
   // Store the value if there is one
   if (node[name_]) {
     value_ = node[name_].template as<T>();
+
+    //LOG(INFO) << "Setting value for " << name_ << ", parsed value: " << value_;
+
     return;
   }
 

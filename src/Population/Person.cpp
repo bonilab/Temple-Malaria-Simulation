@@ -822,9 +822,47 @@ double Person::prob_present_at_mda() {
   return prob_present_at_mda_by_age_[i];
 }
 
+
+//added for SMC
+
+void Person::generate_prob_present_at_smc_by_location() {
+  if (prob_present_at_smc_by_location().empty()) {
+
+    // loop over district instead of pixel
+    //for (std::size_t loc = 0; loc < Model::CONFIG->number_of_locations(); loc++) {
+    for (std::size_t i = 0;
+         i < Model::CONFIG->mean_prob_individual_present_at_smc().size(); i++) {
+
+      auto alpha = Model::CONFIG->prob_individual_present_at_smc_distribution()[i].alpha;
+      auto beta = Model::CONFIG->prob_individual_present_at_smc_distribution()[i].beta;
+      auto value = Model::RANDOM->random_beta(alpha, beta);
+      prob_present_at_smc_by_location_.push_back(value);
+    }
+  }
+}
+
+double Person::prob_present_at_smc() {
+  auto district = SpatialData::get_instance().get_admin_unit(
+      "district", location_);
+  auto smc_districts = Model::CONFIG->smc_districts();
+
+  auto it = std::find(smc_districts.begin(), smc_districts.end(), district);
+  if (it != smc_districts.end()) {
+    std::size_t index = std::distance(smc_districts.begin(), it);
+    return prob_present_at_smc_by_location_[index];
+  }
+  else{
+    return 0.0; // Not in SMC district
+  }
+  
+  
+}
+
 bool Person::has_effective_drug_in_blood() const {
   for (const auto &kv_drug : *drugs_in_blood_->drugs()) {
-    if (kv_drug.second->last_update_value() > 0.5) return true;
+    // if (kv_drug.second->last_update_value() > 0.5) return true; //  threshold before SMC 
+    if (kv_drug.second->last_update_value() > Model::CONFIG->has_effective_drug_in_blood_threshold()) return true;
+
   }
   return false;
 }

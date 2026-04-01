@@ -41,6 +41,10 @@ public:
 
   static std::vector<Event*> build_single_round_mda_event(
       const YAML::Node &node, Config* config);
+  
+  //added for SMC
+  static std::vector<Event*> build_smc_event(
+      const YAML::Node &node, Config* config); 
 
   static std::vector<Event*> build_modify_nested_mft_strategy_event(
       const YAML::Node &node, Config* config);

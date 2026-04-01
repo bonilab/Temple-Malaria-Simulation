@@ -122,6 +122,10 @@ public:
 
   PROPERTY_REF(std::vector<double>, prob_present_at_mda_by_age)
 
+  // added for SMC
+  PROPERTY_REF(std::vector<double>, prob_present_at_smc_by_location)
+  PROPERTY_REF(bool, tracked_for_smc)
+
 #ifdef ENABLE_TRAVEL_TRACKING
   PROPERTY_REF(int, day_that_last_trip_was_initiated)
   PROPERTY_REF(int, day_that_last_trip_outside_district_was_initiated)
@@ -277,6 +281,11 @@ public:
   void generate_prob_present_at_mda_by_age();
 
   double prob_present_at_mda();
+
+  // added for SMC
+  void generate_prob_present_at_smc_by_location();
+
+  double prob_present_at_smc();
 
   bool has_effective_drug_in_blood() const;
 

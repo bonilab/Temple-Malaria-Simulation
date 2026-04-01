@@ -384,4 +384,29 @@ public:
   void set_value(const YAML::Node &node) override;
 };
 
+// added for SMC
+class prob_individual_present_at_smc_distribution : public IConfigItem {
+  DELETE_COPY_AND_MOVE(prob_individual_present_at_smc_distribution)
+
+public:
+  std::vector<beta_distribution_params> value_;
+
+public:
+  // constructor
+  explicit prob_individual_present_at_smc_distribution(
+      const std::string &name,
+      std::vector<beta_distribution_params> default_value,
+      Config* config = nullptr)
+      : IConfigItem(config, name), value_{std::move(default_value)} {}
+
+  // destructor
+  virtual ~prob_individual_present_at_smc_distribution() = default;
+
+  // accessor to the underlying vector of beta_distribution_params
+  virtual std::vector<beta_distribution_params>& operator()() { return value_; }
+
+  // load from YAML node override
+  void set_value(const YAML::Node &node) override;
+};
+
 #endif

@@ -41,6 +41,9 @@ class Population : public Dispatcher {
   // Population size currently in the location
   PROPERTY_REF(IntVector, popsize_by_location)
 
+  // id of people being tracked for SMC analysis // added for SMC
+  PROPERTY_REF(IntVector, smc_tracked_person_ids) 
+
 private:
   // Generate the individual at the given location
   void generate_individual(int location, int age_class);

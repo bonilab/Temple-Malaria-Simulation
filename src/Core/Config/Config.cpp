@@ -45,7 +45,19 @@ void Config::read_from_file(const std::string &config_file_name) {
 
   try {
     for (auto &config_item : config_items) {
-      LOG(INFO) << "Reading config item: " << config_item->name();
+      //LOG(INFO) << "Reading config item: " << config_item->name();
+
+
+      // Debug for SMC parsing
+      // const std::string key = config_item->name();
+
+      // if (config[key]) {
+      //   LOG(INFO) << "  --> Raw value from YAML: " << YAML::Dump(config[key]);
+      // } else {
+      //   LOG(WARNING) << "  --> Key not found in YAML!";
+      // }
+
+
       config_item->set_value(config);
     }
   } catch (std::invalid_argument &error) {

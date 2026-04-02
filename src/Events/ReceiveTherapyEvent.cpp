@@ -39,6 +39,7 @@ void ReceiveTherapyEvent::schedule_event(
 
 void ReceiveTherapyEvent::execute() {
   auto* person = dynamic_cast<Person*>(dispatcher);
+  //std::cout<<person->get_uid()<<" is receiving therapy 2222 "<<std::endl;
   person->receive_therapy(received_therapy_, clinical_caused_parasite_,
                           is_mac_therapy_);
   person->schedule_update_by_drug_event(clinical_caused_parasite_);

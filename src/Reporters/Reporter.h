@@ -59,6 +59,7 @@ public:
     SQLITE_MONTHLY_REPORTER,
 
     TRAVEL_TRACKING_REPORTER,
+    SMC_REPORTER, //added for SMC
     // Null reporter used when the model needs to be initialized for access to
     // functionality
     NULL_REPORTER

@@ -328,6 +328,9 @@ void Population::generate_individual(int location, int age_class) {
   p->schedule_update_every_K_days_event(time);
   p->generate_prob_present_at_mda_by_age();
 
+  // added for SMC
+  p->generate_prob_present_at_smc_by_location();
+
   add_person(p);
 }
 
@@ -528,6 +531,9 @@ void Population::give_1_birth(const int &location) {
 
   p->schedule_update_every_K_days_event(Model::CONFIG->update_frequency());
   p->generate_prob_present_at_mda_by_age();
+
+  // added for SMC
+  p->generate_prob_present_at_smc_by_location();
 
   add_person(p);
 }

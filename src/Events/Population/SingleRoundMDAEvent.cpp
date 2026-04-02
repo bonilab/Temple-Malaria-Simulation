@@ -46,8 +46,20 @@ void SingleRoundMDAEvent::execute() {
             ? number_indidividuals_in_location
             : number_of_individuals_will_receive_mda;
     // shuffle app_persons_in_location index for sampling without replacement
+
+    
+
+    // std::cout<< "Number of individuals in location " << loc
+    //     << ": " << number_indidividuals_in_location
+    //     << ", Number of individuals will receive MDA: "
+    //     << number_of_individuals_will_receive_mda << std::endl;
+
+    //fix (check if empty)
+    if (!all_persons_in_location.empty()) {
     Model::RANDOM->shuffle(&all_persons_in_location[0],
                            all_persons_in_location.size(), sizeof(std::size_t));
+    }
+    
 
     for (std::size_t p_i = 0; p_i < number_of_individuals_will_receive_mda;
          p_i++) {

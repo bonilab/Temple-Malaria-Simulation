@@ -108,6 +108,20 @@ public:
 
   CONFIG_ITEM(mda_therapy_id, int, 0)
 
+    // added for SMC July 2025
+  CONFIG_ITEM(smc_therapy_id, int, 0)
+  CONFIG_ITEM(smc_districts, IntVector, IntVector())
+  CONFIG_ITEM(mean_prob_individual_present_at_smc, DoubleVector, DoubleVector())
+  CONFIG_ITEM(sd_prob_individual_present_at_smc, DoubleVector, DoubleVector())
+  CONFIG_ITEM(smc_reporting_start_day, date::year_month_day, date::year_month_day{date::year{2011} / 1 / 1})
+  CONFIG_ITEM(smc_reporting_end_day, date::year_month_day, date::year_month_day{date::year{2011} / 1 / 1})
+  //CONFIG_ITEM(smc_reporting_interval, int, 1) // implement if required
+  CONFIG_ITEM(smc_reporting_number_of_people_tracked, int, 100)
+  CONFIG_ITEM(smc_reporting_track_per_district, bool, false)
+  CONFIG_ITEM(smc_refresh_samples_each_interval, bool, false)
+  CONFIG_ITEM(has_effective_drug_in_blood_threshold, double, 0.5)
+  CONFIG_ITEM(coverage_adjustment, bool, true)
+
   CONFIG_ITEM(artificial_rescaling_of_population_size, double, 1.0)
 
   CONFIG_ITEM(cell_level_reporting, bool, false)
@@ -153,6 +167,10 @@ public:
   CUSTOM_CONFIG_ITEM(prob_individual_present_at_mda_distribution,
                      std::vector<beta_distribution_params>())
 
+  //added for SMC
+  CUSTOM_CONFIG_ITEM(prob_individual_present_at_smc_distribution,
+                     std::vector<beta_distribution_params>())
+
   CUSTOM_CONFIG_ITEM(rapt_config, RaptConfigEntry())
   VIRTUAL_PROPERTY_REF(double, modified_mutation_factor)
 
@@ -171,6 +189,9 @@ public:
   // added for ASTC May 2025
   CONFIG_ITEM(treatment_age_classes_upper, std::vector<int>, (std::vector<int>{5, 100}))
   CONFIG_ITEM(treatment_adjustments, std::vector<double>, (std::vector<double>{1, 1}))
+
+
+  
 
 };
 

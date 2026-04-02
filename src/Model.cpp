@@ -40,6 +40,8 @@
 #include "Treatment/SteadyTCM.hxx"
 #include "easylogging++.h"
 
+#include "Reporters/SMCReporter.h" //added for SMC
+
 Model* Model::MODEL = nullptr;
 Config* Model::CONFIG = nullptr;
 Random* Model::RANDOM = nullptr;
@@ -330,6 +332,31 @@ void Model::daily_update(const int &current_time) {
 
   // check to switch strategy
   treatment_strategy_->update_end_of_time_step();
+
+  // START added for SMC custom report
+
+  // Compute current date in sys_days
+  date::sys_days cur_sd = date::sys_days{ config_->starting_date() } + date::days{ current_time };
+
+  // Get reporting window
+  auto smc_reporting_start_day = config_->smc_reporting_start_day();
+  auto smc_reporting_end_day   = config_->smc_reporting_end_day();
+
+  // Compare as sys_days (safe for <=, >= comparisons)
+  date::sys_days start_sd = date::sys_days{smc_reporting_start_day};
+  date::sys_days end_sd   = date::sys_days{smc_reporting_end_day};
+
+  // Call reporter only if in range
+  if (cur_sd >= start_sd && cur_sd <= end_sd) {
+      for (auto* reporter : reporters_) {
+          if (auto* smc_reporter = dynamic_cast<SMCReporter*>(reporter)) {
+              smc_reporter->custom_report();
+          }
+      }
+  }
+
+  // END added for SMC custom report
+
 }
 
 // this will be called by scheduler at the beginning of first day of the month

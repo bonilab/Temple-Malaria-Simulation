@@ -532,3 +532,38 @@ void prob_individual_present_at_mda_distribution::set_value(
     value_.push_back(params);
   }
 }
+
+
+// added for SMC
+void prob_individual_present_at_smc_distribution::set_value(
+    const YAML::Node &node) {
+  value_.clear();
+
+  // get district not pixel
+  // auto number_of_locations = Model::CONFIG->number_of_locations();
+  // for (std::size_t loc = 0;
+  //      loc < number_of_locations; loc++) {
+
+
+  //     auto input_loc = config_->mean_prob_individual_present_at_smc().size()
+  //                              < number_of_locations
+  //                          ? 0
+  //                          : loc;
+  for (std::size_t i = 0;
+       i < config_->mean_prob_individual_present_at_smc().size(); i++) {
+    const auto mean = config_->mean_prob_individual_present_at_smc()[i];
+    const auto sd = config_->sd_prob_individual_present_at_smc()[i];
+
+    beta_distribution_params params{};
+
+    if (NumberHelpers::is_zero(sd)) {
+      params.alpha = mean;
+      params.beta = 0.0;
+    } else {
+      params.alpha = mean * mean * (1 - mean) / (sd * sd) - mean;
+      params.beta = params.alpha / mean - params.alpha;
+    }
+
+    value_.push_back(params);
+  }
+}

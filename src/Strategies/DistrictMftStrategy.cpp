@@ -70,5 +70,6 @@ Therapy* DistrictMftStrategy::get_therapy(Person* person) {
   throw std::runtime_error("Scanned for therapy without finding a match: "
                            + this->name()
                            + ", district: " + std::to_string(district)
-                           + ", pr: " + std::to_string(pr));
+                           + ", pr: " + std::to_string(pr)
+                           + ", sum: " + std::to_string(sum));
 }

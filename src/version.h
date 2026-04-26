@@ -5,4 +5,4 @@
  * scripts.
  */
 
-const char* VERSION = "4.2-dev";
+const char* VERSION = "4.3";

@@ -118,18 +118,31 @@ bool SpatialData::check_catalog(std::string &errors) {
 
   //check for all rasters have the same no_data cell locations
   AscFile* ref_raster = nullptr;
-  for (const auto &raster : data) {
-    if (!raster) { continue; }
-    if (ref_raster == nullptr) {
-      ref_raster = raster.get();
+  int ref_type = -1;
+
+  for (int t = 0; t < static_cast<int>(data.size()); ++t) {
+    const auto& raster_uptr = data[t];
+    if (!raster_uptr) continue;
+
+    AscFile* raster = raster_uptr.get();
+
+    if (!ref_raster) {
+      ref_raster = raster;
+      ref_type = t;
       continue;
     }
 
-    for (int row = 0; row < raster->NROWS; row++) {
-      for (int col = 0; col < raster->NCOLS; col++) {
+    for (int row = 0; row < raster->NROWS; ++row) {
+      for (int col = 0; col < raster->NCOLS; ++col) {
         if (raster->data[row][col] == raster->NODATA_VALUE) {
-          if (ref_raster->data[row][col] != raster->NODATA_VALUE) { 
-            errors = fmt::format("NODATA_VALUE mismatch: {}", raster->NODATA_VALUE);
+          if (ref_raster->data[row][col] != raster->NODATA_VALUE) {
+            errors = fmt::format(
+              "NODATA mask mismatch at row {} col {} | ref_type {} ref_val {} | cur_type {} cur_val {} | cur_nodata {}",
+              row, col,
+              ref_type, ref_raster->data[row][col],
+              t, raster->data[row][col],
+              raster->NODATA_VALUE
+            );
             LOG(ERROR) << errors;
             return true;
           }
@@ -137,6 +150,7 @@ bool SpatialData::check_catalog(std::string &errors) {
       }
     }
   }
+
 
   return false;
 }

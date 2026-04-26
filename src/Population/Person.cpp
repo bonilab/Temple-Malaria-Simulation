@@ -16,6 +16,7 @@
 #include "Constants.h"
 #include "Core/Config/Config.h"
 #include "Core/Random.h"
+#include "Debug/DebugMonthlyStats.h"
 #include "DrugsInBlood.h"
 #include "Events/CirculateToTargetLocationNextDayEvent.h"
 #include "Events/EndClinicalByNoTreatmentEvent.h"
@@ -523,16 +524,43 @@ void Person::determine_clinical_or_not(
   if (all_clonal_parasite_populations_->contain(clinical_caused_parasite)) {
     const auto p = Model::RANDOM->random_flat(0.0, 1.0);
 
-    if (p <= get_probability_progress_to_clinical()) {
+    // if (p <= get_probability_progress_to_clinical()) {
+    //   // progress to clinical after several days
+    //   clinical_caused_parasite->set_update_function(
+    //       Model::MODEL->progress_to_clinical_update_function());
+    //   clinical_caused_parasite->set_last_update_log10_parasite_density(
+    //       Model::CONFIG->parasite_density_level()
+    //           .log_parasite_density_asymptomatic);
+    //   schedule_relapse_event(clinical_caused_parasite,
+    //                          Model::CONFIG->relapse_duration());
+    //
+    // } else {
+    //   // progress to clearance
+    //
+    //   clinical_caused_parasite->set_update_function(
+    //       Model::MODEL->immunity_clearance_update_function());
+    // }
+
+    const double p_clinical = get_probability_progress_to_clinical();
+    const double immunity = immune_system()->get_current_value();
+
+    if (age() == 0) {
+      DEBUG_MONTHLY_STATS.record_clinical_decision_age0(p_clinical, immunity);
+    }
+    if (p <= p_clinical) {
+      if (age() == 0) {
+        DEBUG_MONTHLY_STATS.record_clinical_will_schedule_age0();
+        DEBUG_MONTHLY_STATS.record_clinical_scheduled_age0(p_clinical, immunity);
+      }
       // progress to clinical after several days
       clinical_caused_parasite->set_update_function(
           Model::MODEL->progress_to_clinical_update_function());
       clinical_caused_parasite->set_last_update_log10_parasite_density(
           Model::CONFIG->parasite_density_level()
               .log_parasite_density_asymptomatic);
-      schedule_relapse_event(clinical_caused_parasite,
-                             Model::CONFIG->relapse_duration());
-
+      // schedule_relapse_event(clinical_caused_parasite,
+      //                        Model::CONFIG->relapse_duration());
+      schedule_progress_to_clinical_event_by(clinical_caused_parasite);
     } else {
       // progress to clearance
 

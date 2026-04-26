@@ -27,6 +27,7 @@
 #include "Properties/PersonIndexByLocationStateAgeClass.h"
 #include "Spatial/SpatialModel.hxx"
 #include "easylogging++.h"
+#include "Debug/DebugMonthlyStats.h"
 
 Population::Population(Model* model) : model_(model) {
   person_index_list_ = new PersonIndexPtrList();
@@ -145,6 +146,11 @@ void Population::perform_infection_event() {
       auto number_of_bites = Model::RANDOM->random_poisson(poisson_means);
       if (number_of_bites <= 0) { continue; }
 
+      DEBUG_MONTHLY_STATS.record_foi(force_of_infection);
+      DEBUG_MONTHLY_STATS.record_new_beta(new_beta);
+      DEBUG_MONTHLY_STATS.record_poisson_mean(poisson_means);
+      DEBUG_MONTHLY_STATS.record_bites(number_of_bites);
+
       // data_collector store number of bites
       Model::MAIN_DATA_COLLECTOR->collect_number_of_bites(loc, number_of_bites);
 
@@ -178,8 +184,18 @@ void Population::perform_infection_event() {
           // If the person is not dead, inflict the bite upon them,
           // an update today's infection if they get infected
           assert(person->host_state() != Person::DEAD);
+          if (person->age() == 0) {
+            DEBUG_MONTHLY_STATS.record_bite_attempt_age0();
+            DEBUG_MONTHLY_STATS.record_infectious_bite_age0();
+          }
+
           if (person->inflict_bite(parasite_type_id)) {
             today_infections.push_back(person);
+            DEBUG_MONTHLY_STATS.record_successful_infection();
+
+            if (person->age() == 0) {
+              DEBUG_MONTHLY_STATS.record_successful_infection_age0();
+            }
           }
         }
       }

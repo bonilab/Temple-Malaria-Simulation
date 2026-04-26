@@ -16,6 +16,7 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 
 # Define the core simulation files
 file(GLOB SOURCE *.cpp
+        Debug/*.cpp
         Core/*.cpp
         Core/Config/*.cpp
         Core/Config/Decoders/*.cpp

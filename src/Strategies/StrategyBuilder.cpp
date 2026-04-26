@@ -16,6 +16,7 @@
 #include "NestedMFTStrategy.h"
 #include "SFTStrategy.h"
 #include "Strategies/MFTAgeBasedStrategy.h"
+#include "Therapies/Therapy.hxx"
 
 StrategyBuilder::StrategyBuilder() = default;
 
@@ -102,6 +103,14 @@ IStrategy* StrategyBuilder::buildMFTStrategy(const YAML::Node &ns,
 
   add_distributions(ns["distribution"], result->distribution);
   add_therapies(ns, result, config);
+
+  std::cout << "Strategy id: " << result->name() << std::endl;
+  for (int i = 0; i < result->therapy_list.size(); i++) {
+      std::cout << "Therapy id[" << i << "]: "<< result->therapy_list[i]->id() << " dist: " << result->distribution[i] << std::endl;
+  }
+  for (int i = 0; i < result->distribution.size(); i++) {
+    std::cout << "Distribution[" << i << "] = " << result->distribution[i]  << std::endl;
+  }
   return result;
 }
 

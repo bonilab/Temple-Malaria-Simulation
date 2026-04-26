@@ -39,6 +39,7 @@
 #include "Therapies/Drug.h"
 #include "Treatment/SteadyTCM.hxx"
 #include "easylogging++.h"
+#include "Debug/DebugMonthlyStats.h"
 
 Model* Model::MODEL = nullptr;
 Config* Model::CONFIG = nullptr;
@@ -205,6 +206,9 @@ void Model::initialize(int job_number, const std::string &path) {
   for (auto* event : config_->PreconfigEvents()) {
     scheduler_->schedule_population_event(event);
   }
+
+  DEBUG_MONTHLY_STATS.set_version("v43");
+  DEBUG_MONTHLY_STATS.reset_month(0);
 }
 
 void Model::initialize_object_pool(const int &size) {

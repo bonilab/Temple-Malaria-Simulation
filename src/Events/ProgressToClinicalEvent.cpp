@@ -9,6 +9,7 @@
 #include "Core/Config/Config.h"
 #include "Core/Random.h"
 #include "Core/Scheduler.h"
+#include "Debug/DebugMonthlyStats.h"
 #include "Events/ReportTreatmentFailureDeathEvent.h"
 #include "MDC/MainDataCollector.h"
 #include "Model.h"
@@ -65,11 +66,14 @@ void ProgressToClinicalEvent::execute() {
   clinical_caused_parasite_->set_update_function(
       Model::MODEL->clinical_update_function());
 
-  // Statistic collect cumulative clinical episodes
-  Model::MAIN_DATA_COLLECTOR->collect_1_clinical_episode(person->location(),
-                                                          person->age(),
-                                                         person->age_class());
+  if (person->age() == 0) {
+    DEBUG_MONTHLY_STATS.record_clinical_count_age0_person(person->get_uid());
+  }
 
+  Model::MAIN_DATA_COLLECTOR->collect_1_clinical_episode(
+      person->location(),
+      person->age(),
+      person->age_class());
   const auto p = Model::RANDOM->random_flat(0.0, 1.0);
 
   const auto p_treatment =

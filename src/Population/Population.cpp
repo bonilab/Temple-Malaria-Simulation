@@ -274,7 +274,7 @@ void Population::perform_infection_event() {
 }
 
 static void write_debug_infectivity_grid_v4() {
-  std::ofstream out("debug_relative_infectivity_v4.csv", std::ios::trunc);
+  std::ofstream out("debug_relative_infectivity_v43.csv", std::ios::trunc);
 
   const double sigma = Model::CONFIG->relative_infectivity().sigma;
   const double ro_star = Model::CONFIG->relative_infectivity().ro_star;

@@ -51,10 +51,12 @@ struct DebugMonthlyStats {
 
   long long clinical_count_age0_from_normal_progression = 0;
   long long clinical_count_age0_from_recurrence = 0;
+  long long clinical_count_age0_from_relapse = 0;
   long long clinical_count_age0_from_unknown = 0;
 
   long long clinical_count_age0_duplicate_normal = 0;
   long long clinical_count_age0_duplicate_recurrence = 0;
+  long long clinical_count_age0_duplicate_relapse = 0;
   long long clinical_count_age0_duplicate_unknown = 0;
   long long clinical_count_age0_after_min_gap = 0;
 
@@ -189,10 +191,12 @@ struct DebugMonthlyStats {
 
     clinical_count_age0_from_normal_progression = 0;
     clinical_count_age0_from_recurrence = 0;
+    clinical_count_age0_from_relapse = 0;
     clinical_count_age0_from_unknown = 0;
 
     clinical_count_age0_duplicate_normal = 0;
     clinical_count_age0_duplicate_recurrence = 0;
+    clinical_count_age0_duplicate_relapse = 0;
     clinical_count_age0_duplicate_unknown = 0;
     clinical_count_age0_after_min_gap = 0;
 
@@ -358,6 +362,16 @@ struct DebugMonthlyStats {
     }
   }
 
+
+  void record_clinical_count_age0_relapse(long long person_id) {
+    const bool duplicate = record_clinical_count_age0_person(person_id);
+    clinical_count_age0_from_relapse++;
+
+    if (duplicate) {
+      clinical_count_age0_duplicate_relapse++;
+    }
+  }
+
   void record_clinical_count_age0_unknown(long long person_id) {
     const bool duplicate = record_clinical_count_age0_person(person_id);
     clinical_count_age0_from_unknown++;
@@ -496,9 +510,11 @@ struct DebugMonthlyStats {
           << "clinical_count_age0_new_infection,clinical_count_age0_duplicate_person,"
           << "clinical_count_age0_from_normal_progression,"
           << "clinical_count_age0_from_recurrence,"
+          << "clinical_count_age0_from_relapse,"
           << "clinical_count_age0_from_unknown,"
           << "clinical_count_age0_duplicate_normal,"
           << "clinical_count_age0_duplicate_recurrence,"
+          << "clinical_count_age0_duplicate_relapse,"
           << "clinical_count_age0_duplicate_unknown,"
           << "clinical_count_age0_after_min_gap,"
           << "bite_eligible_persons_total,"
@@ -620,9 +636,11 @@ struct DebugMonthlyStats {
         << clinical_count_age0_duplicate_person << ","
         << clinical_count_age0_from_normal_progression << ","
         << clinical_count_age0_from_recurrence << ","
+        << clinical_count_age0_from_relapse << ","
         << clinical_count_age0_from_unknown << ","
         << clinical_count_age0_duplicate_normal << ","
         << clinical_count_age0_duplicate_recurrence << ","
+        << clinical_count_age0_duplicate_relapse << ","
         << clinical_count_age0_duplicate_unknown << ","
         << clinical_count_age0_after_min_gap << ","
         << bite_eligible_persons_total << ","

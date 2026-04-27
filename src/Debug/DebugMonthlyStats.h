@@ -11,8 +11,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "Population/Person.h"
-
 struct DebugMonthlyStats {
   int current_month = -1;
 
@@ -34,17 +32,32 @@ struct DebugMonthlyStats {
   long long infectious_bites_age0 = 0;
   long long genotype_draw_failed_age0 = 0;
 
+  // ------------------------------------------------------------
+  // Age-0 bite / infection-pressure debug counters
+  // ------------------------------------------------------------
+  double sum_relative_biting_rate_age0 = 0.0;
+  long long n_relative_biting_rate_age0 = 0;
+
+  double sum_infection_probability_age0 = 0.0;
+  long long n_infection_probability_age0 = 0;
+
   long long clinical_decision_age0 = 0;
   long long clinical_will_schedule_age0 = 0;
 
   long long clinical_count_age0_new_infection = 0;
 
+  std::unordered_map<long long, int> clinical_count_age0_by_person;
+  long long clinical_count_age0_duplicate_person = 0;
+
   long long clinical_count_age0_from_normal_progression = 0;
+  long long clinical_count_age0_from_recurrence = 0;
+  long long clinical_count_age0_from_relapse = 0;
   long long clinical_count_age0_from_unknown = 0;
 
   long long clinical_count_age0_duplicate_normal = 0;
+  long long clinical_count_age0_duplicate_recurrence = 0;
+  long long clinical_count_age0_duplicate_relapse = 0;
   long long clinical_count_age0_duplicate_unknown = 0;
-
   long long clinical_count_age0_after_min_gap = 0;
 
   // ------------------------------------------------------------
@@ -65,15 +78,6 @@ struct DebugMonthlyStats {
   double bite_selected_weight_age0 = 0.0;
 
   // ------------------------------------------------------------
-  // Age-0 bite / infection probability debug
-  // ------------------------------------------------------------
-  double sum_relative_biting_rate_age0 = 0.0;
-  long long n_relative_biting_rate_age0 = 0;
-
-  double sum_infection_probability_age0 = 0.0;
-  long long n_infection_probability_age0 = 0;
-
-  // ------------------------------------------------------------
   // FOI construction aggregate debug
   // This replaces heavy per-person debug_foi_terms.csv logging.
   // These are FOI-weighted means, so high-FOI contributors matter more.
@@ -85,9 +89,6 @@ struct DebugMonthlyStats {
   double foi_debug_relative_infectivity_weighted_sum = 0.0;
   double foi_debug_log_density_weighted_sum = 0.0;
   double foi_debug_genotype_share_weighted_sum = 0.0;
-
-  std::unordered_map<long long, int> clinical_count_age0_by_person;
-  long long clinical_count_age0_duplicate_person = 0;
 
   bool header_written = false;
   bool event_header_written = false;
@@ -175,27 +176,29 @@ struct DebugMonthlyStats {
     infectious_bites_age0 = 0;
     genotype_draw_failed_age0 = 0;
 
-    clinical_decision_age0 = 0;
-    clinical_will_schedule_age0 = 0;
-
-    clinical_count_age0_duplicate_person = 0;
-    clinical_count_age0_by_person.clear();
-
-    clinical_count_age0_new_infection = 0;
-
-    clinical_count_age0_from_normal_progression = 0;
-    clinical_count_age0_from_unknown = 0;
-
-    clinical_count_age0_duplicate_normal = 0;
-    clinical_count_age0_duplicate_unknown = 0;
-
-    clinical_count_age0_after_min_gap = 0;
-
     sum_relative_biting_rate_age0 = 0.0;
     n_relative_biting_rate_age0 = 0;
 
     sum_infection_probability_age0 = 0.0;
     n_infection_probability_age0 = 0;
+
+    clinical_decision_age0 = 0;
+    clinical_will_schedule_age0 = 0;
+
+    clinical_count_age0_new_infection = 0;
+    clinical_count_age0_duplicate_person = 0;
+    clinical_count_age0_by_person.clear();
+
+    clinical_count_age0_from_normal_progression = 0;
+    clinical_count_age0_from_recurrence = 0;
+    clinical_count_age0_from_relapse = 0;
+    clinical_count_age0_from_unknown = 0;
+
+    clinical_count_age0_duplicate_normal = 0;
+    clinical_count_age0_duplicate_recurrence = 0;
+    clinical_count_age0_duplicate_relapse = 0;
+    clinical_count_age0_duplicate_unknown = 0;
+    clinical_count_age0_after_min_gap = 0;
 
     bite_eligible_persons_total = 0;
     bite_eligible_persons_age0 = 0;
@@ -245,14 +248,8 @@ struct DebugMonthlyStats {
     genotype_draw_failed_age0++;
   }
 
-  void record_relative_biting_rate_age0(double x) {
-    sum_relative_biting_rate_age0 += x;
-    n_relative_biting_rate_age0++;
-  }
-
-  void record_infection_probability_age0(double x) {
-    sum_infection_probability_age0 += x;
-    n_infection_probability_age0++;
+  void record_clinical_count_age0_after_min_gap() {
+    clinical_count_age0_after_min_gap++;
   }
 
   void record_foi(double foi) {
@@ -305,6 +302,19 @@ struct DebugMonthlyStats {
     successful_infections_age0++;
   }
 
+  // ------------------------------------------------------------
+  // Age-0 bite / infection-pressure record functions
+  // ------------------------------------------------------------
+  void record_relative_biting_rate_age0(double x) {
+    sum_relative_biting_rate_age0 += x;
+    n_relative_biting_rate_age0++;
+  }
+
+  void record_infection_probability_age0(double x) {
+    sum_infection_probability_age0 += x;
+    n_infection_probability_age0++;
+  }
+
   void record_clinical_decision_age0(double p_clinical, double immunity) {
     clinical_decision_age0++;
     sum_p_clinical_age0 += p_clinical;
@@ -314,6 +324,10 @@ struct DebugMonthlyStats {
 
   void record_clinical_will_schedule_age0() {
     clinical_will_schedule_age0++;
+  }
+
+  void record_clinical_count_age0_new_infection() {
+    clinical_count_age0_new_infection++;
   }
 
   bool record_clinical_count_age0_person(long long person_id) {
@@ -330,20 +344,31 @@ struct DebugMonthlyStats {
     return false;
   }
 
-  void record_clinical_count_age0_new_infection() {
-    clinical_count_age0_new_infection++;
-  }
-
-  void record_clinical_count_age0_after_min_gap() {
-    clinical_count_age0_after_min_gap++;
-  }
-
   void record_clinical_count_age0_normal(long long person_id) {
     const bool duplicate = record_clinical_count_age0_person(person_id);
     clinical_count_age0_from_normal_progression++;
 
     if (duplicate) {
       clinical_count_age0_duplicate_normal++;
+    }
+  }
+
+  void record_clinical_count_age0_recurrence(long long person_id) {
+    const bool duplicate = record_clinical_count_age0_person(person_id);
+    clinical_count_age0_from_recurrence++;
+
+    if (duplicate) {
+      clinical_count_age0_duplicate_recurrence++;
+    }
+  }
+
+
+  void record_clinical_count_age0_relapse(long long person_id) {
+    const bool duplicate = record_clinical_count_age0_person(person_id);
+    clinical_count_age0_from_relapse++;
+
+    if (duplicate) {
+      clinical_count_age0_duplicate_relapse++;
     }
   }
 
@@ -358,18 +383,10 @@ struct DebugMonthlyStats {
 
   // ------------------------------------------------------------
   // Light FOI construction debug.
-  // Use this instead of writing one row per person/parasite FOI update.
+  // Use this instead of writing one row per person FOI term.
   //
-  // v43 call example:
-  // DEBUG_MONTHLY_STATS.record_foi_term_aggregate(
-  //     biting_weight,
-  //     log_total_relative_parasite_density,
-  //     relative_infectivity_value,
-  //     blood_parasite_log_relative_density,
-  //     relative_force_of_infection
-  // );
+  // v6 call example in Population::update_current_foi():
   //
-  // v6 call example:
   // DEBUG_MONTHLY_STATS.record_foi_term_aggregate(
   //     person_relative_biting_rate,
   //     log_10_total_infectious_density,
@@ -490,11 +507,14 @@ struct DebugMonthlyStats {
           << "mean_infection_probability_age0,n_infection_probability_age0,"
           << "clinical_scheduled_age0,clinical_count_age0,"
           << "clinical_decision_age0,clinical_will_schedule_age0,"
-          << "clinical_count_age0_new_infection,"
-          << "clinical_count_age0_duplicate_person,"
+          << "clinical_count_age0_new_infection,clinical_count_age0_duplicate_person,"
           << "clinical_count_age0_from_normal_progression,"
+          << "clinical_count_age0_from_recurrence,"
+          << "clinical_count_age0_from_relapse,"
           << "clinical_count_age0_from_unknown,"
           << "clinical_count_age0_duplicate_normal,"
+          << "clinical_count_age0_duplicate_recurrence,"
+          << "clinical_count_age0_duplicate_relapse,"
           << "clinical_count_age0_duplicate_unknown,"
           << "clinical_count_age0_after_min_gap,"
           << "bite_eligible_persons_total,"
@@ -615,8 +635,12 @@ struct DebugMonthlyStats {
         << clinical_count_age0_new_infection << ","
         << clinical_count_age0_duplicate_person << ","
         << clinical_count_age0_from_normal_progression << ","
+        << clinical_count_age0_from_recurrence << ","
+        << clinical_count_age0_from_relapse << ","
         << clinical_count_age0_from_unknown << ","
         << clinical_count_age0_duplicate_normal << ","
+        << clinical_count_age0_duplicate_recurrence << ","
+        << clinical_count_age0_duplicate_relapse << ","
         << clinical_count_age0_duplicate_unknown << ","
         << clinical_count_age0_after_min_gap << ","
         << bite_eligible_persons_total << ","

@@ -5,4 +5,4 @@
  * scripts.
  */
 
-const char* VERSION = "4.3";
+const char* VERSION = "4.2-cli-ep-count-gap-debug";

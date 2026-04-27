@@ -226,22 +226,43 @@ ClonalParasitePopulation* Person::add_new_parasite_to_blood(
 
   return blood_parasite;
 }
-
 void Person::notify_change_in_force_of_infection(
-    const double &sign, const int &parasite_type_id,
+    const double &sign,
+    const int &parasite_type_id,
     const double &blood_parasite_log_relative_density,
     const double &log_total_relative_parasite_density) {
   // Return if the relative density is zero
-  if (blood_parasite_log_relative_density == 0.0) { return; }
+  if (blood_parasite_log_relative_density == 0.0) {
+    return;
+  }
 
   // FOI_i = (+/-) b_i * g(D_i) * D_r
+  const auto relative_infectivity_value =
+      relative_infectivity(log_total_relative_parasite_density);
+
+  const auto biting_weight = get_biting_level_value();
+
   const auto relative_force_of_infection =
-      sign * get_biting_level_value()
-      * relative_infectivity(log_total_relative_parasite_density)
+      sign
+      * biting_weight
+      * relative_infectivity_value
       * blood_parasite_log_relative_density;
 
-  population_->notify_change_in_force_of_infection(location_, parasite_type_id,
-                                                   relative_force_of_infection);
+  if (relative_force_of_infection > 0.0) {
+    DEBUG_MONTHLY_STATS.record_foi_term_aggregate(
+        biting_weight,
+        log_total_relative_parasite_density,
+        relative_infectivity_value,
+        blood_parasite_log_relative_density,
+        relative_force_of_infection
+    );
+  }
+
+  population_->notify_change_in_force_of_infection(
+      location_,
+      parasite_type_id,
+      relative_force_of_infection
+  );
 }
 
 double Person::get_biting_level_value() {
@@ -305,9 +326,32 @@ void Person::schedule_progress_to_clinical_event_by(
   const auto time = (age_ <= 5) ? Model::CONFIG->days_to_clinical_under_five()
                                 : Model::CONFIG->days_to_clinical_over_five();
 
+  const int today = Model::SCHEDULER->current_time();
+  const int event_time = today + time;
+
+  if (age() == 0) {
+    const int month = today / 30;
+
+    DEBUG_MONTHLY_STATS.record_age0_clinical_event(
+        month,
+        today,
+        static_cast<long long>(get_uid()),
+        age(),
+        location(),
+        "schedule_normal",
+        "normal_progression",
+        static_cast<int>(host_state()),
+        static_cast<int>(all_clonal_parasite_populations()->size()),
+        get_last_counted_clinical_episode_time(),
+        -1.0,
+        immune_system()->get_current_value(),
+        -1.0,
+        "v4 schedule_progress_to_clinical_event_by: scheduled for day "
+            + std::to_string(event_time));
+  }
+
   ProgressToClinicalEvent::schedule_event(
-      Model::SCHEDULER, this, blood_parasite,
-      Model::SCHEDULER->current_time() + time);
+      Model::SCHEDULER, this, blood_parasite, event_time);
 }
 
 void Person::schedule_test_treatment_failure_event(
@@ -550,17 +594,36 @@ void Person::determine_clinical_or_not(
     if (p <= p_clinical) {
       if (age() == 0) {
         DEBUG_MONTHLY_STATS.record_clinical_will_schedule_age0();
-        DEBUG_MONTHLY_STATS.record_clinical_scheduled_age0(p_clinical, immunity);
+        DEBUG_MONTHLY_STATS.record_clinical_scheduled_age0();
+
+        const int today = Model::SCHEDULER->current_time();
+        const int month = today / 30;
+
+        DEBUG_MONTHLY_STATS.record_age0_clinical_event(
+            month,
+            today,
+            static_cast<long long>(get_uid()),
+            age(),
+            location(),
+            "decision_schedule_normal",
+            "normal_progression",
+            static_cast<int>(host_state()),
+            static_cast<int>(all_clonal_parasite_populations()->size()),
+            get_last_counted_clinical_episode_time(),
+            p_clinical,
+            immunity,
+            p_clinical,
+            "v4 determine_clinical_or_not: p <= p_clinical, normal clinical event will be scheduled");
       }
-      // progress to clinical after several days
+
       clinical_caused_parasite->set_update_function(
           Model::MODEL->progress_to_clinical_update_function());
+
       clinical_caused_parasite->set_last_update_log10_parasite_density(
           Model::CONFIG->parasite_density_level()
               .log_parasite_density_asymptomatic);
-      // schedule_relapse_event(clinical_caused_parasite,
-      //                        Model::CONFIG->relapse_duration());
-      schedule_progress_to_clinical_event_by(clinical_caused_parasite);
+      schedule_relapse_event(clinical_caused_parasite,
+                             Model::CONFIG->relapse_duration());
     } else {
       // progress to clearance
 
@@ -672,28 +735,41 @@ bool Person::inflict_bite(const unsigned int parasite_type_id) {
   increase_number_of_times_bitten();
 
   // Get the probability of infection of a naive individual
-  double pr = Model::CONFIG->transmission_parameter();
+  const double pr = Model::CONFIG->transmission_parameter();
 
   // Get the current immunity and calculate the baseline probability
-  double theta = immune_system()->get_current_value();
-  double pr_inf = pr * (1 - (theta - 0.2) / 0.6) + 0.1 * ((theta - 0.2) / 0.6);
+  const double theta = immune_system()->get_current_value();
+
+  double pr_inf =
+      pr * (1 - (theta - 0.2) / 0.6)
+      + 0.1 * ((theta - 0.2) / 0.6);
 
   // High immunity reduces likelihood of infection
-  if (theta > 0.8) { pr_inf = 0.1; }
+  if (theta > 0.8) {
+    pr_inf = 0.1;
+  }
 
   // Low immunity sets likelihood at the probability of infection
-  if (theta < 0.2) { pr_inf = pr; }
+  if (theta < 0.2) {
+    pr_inf = pr;
+  }
+
+  // Safety clamp
+  pr_inf = std::clamp(pr_inf, 0.0, 1.0);
+
+  // Record the ACTUAL probability used in the random draw
+  last_infection_probability_debug_ = pr_inf;
 
   // If the draw is less than pr_inf, they get infected
   const double draw = Model::RANDOM->random_flat(0.0, 1.0);
+
   if (draw < pr_inf) {
     if (host_state() != Person::EXPOSED && liver_parasite_type() == nullptr) {
-      today_infections()->push_back((int)parasite_type_id);
+      today_infections()->push_back(static_cast<int>(parasite_type_id));
       return true;
     }
   }
 
-  // We were not infected
   return false;
 }
 

@@ -283,6 +283,23 @@ public:
   void receive_therapy(SCTherapy* sc_therapy, bool is_mac_therapy);
 
   [[nodiscard]] double age_in_floating() const;
+
+private:
+  int last_counted_clinical_episode_time_{-1000000};
+  double last_infection_probability_debug_ = 0.0;
+
+public:
+  double last_infection_probability_debug() const {
+    return last_infection_probability_debug_;
+  }
+
+  [[nodiscard]] int get_last_counted_clinical_episode_time() const {
+    return last_counted_clinical_episode_time_;
+  }
+
+  void set_last_counted_clinical_episode_time(int last_counted_clinical_episode_time) {
+    last_counted_clinical_episode_time_ = last_counted_clinical_episode_time;
+  }
 };
 
 #endif

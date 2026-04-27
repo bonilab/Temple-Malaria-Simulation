@@ -124,10 +124,14 @@ void Model::build_initial_treatment_coverage() {
   set_treatment_coverage(tcm);
 }
 
+
 /**
  * Prepare the model to be run.
  */
 void Model::initialize(int job_number, const std::string &path) {
+  assert(Model::CONFIG->death_rate_by_age_class().size()
+         == Model::CONFIG->number_of_age_classes());
+
   LOG(INFO) << "Model initializing...";
 
   // Read the configuration and check to make sure it is valid
@@ -207,7 +211,7 @@ void Model::initialize(int job_number, const std::string &path) {
     scheduler_->schedule_population_event(event);
   }
 
-  DEBUG_MONTHLY_STATS.set_version("v43");
+  DEBUG_MONTHLY_STATS.set_version("v42");
   DEBUG_MONTHLY_STATS.reset_month(0);
 }
 

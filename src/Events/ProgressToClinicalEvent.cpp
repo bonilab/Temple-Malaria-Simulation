@@ -14,6 +14,7 @@
 #include "MDC/MainDataCollector.h"
 #include "Model.h"
 #include "Population/ClonalParasitePopulation.h"
+#include "Population/ImmuneSystem.h"
 #include "Population/Person.h"
 #include "Population/Population.h"
 #include "Strategies/IStrategy.h"
@@ -66,14 +67,85 @@ void ProgressToClinicalEvent::execute() {
   clinical_caused_parasite_->set_update_function(
       Model::MODEL->clinical_update_function());
 
+  // Model::MAIN_DATA_COLLECTOR->collect_1_clinical_episode(
+  //     person->location(),
+  //     person->age(),
+  //     person->age_class());
+  const int today = Model::SCHEDULER->current_time();
+  const int min_gap = Model::CONFIG->minimum_days_for_counting_new_clinical_episode();
+
+  const int last_time = person->get_last_counted_clinical_episode_time();
+  const int gap = today - last_time;
+
   if (person->age() == 0) {
-    DEBUG_MONTHLY_STATS.record_clinical_count_age0_person(person->get_uid());
+    DEBUG_MONTHLY_STATS.record_clinical_count_age0_normal(
+      static_cast<long long>(person->get_uid()));
+
+    DEBUG_MONTHLY_STATS.record_clinical_count_age0_new_infection();
+
+    DEBUG_MONTHLY_STATS.record_age0_clinical_event(
+        today / 30,
+        today,
+        static_cast<long long>(person->get_uid()),
+        person->age(),
+        person->location(),
+        "count_normal",
+        "normal_progression",
+        static_cast<int>(person->host_state()),
+        static_cast<int>(person->all_clonal_parasite_populations()->size()),
+        last_time,
+        -1.0,
+        person->immune_system()->get_current_value(),
+        -1.0,
+        "v4 ProgressToClinicalEvent::execute: event executed and person became CLINICAL");
+
+    if (last_time > -100000 && gap < min_gap) {
+      DEBUG_MONTHLY_STATS.record_age0_clinical_event(
+          today / 30,
+          today,
+          static_cast<long long>(person->get_uid()),
+          person->age(),
+          person->location(),
+          "duplicate_count_normal",
+          "normal_progression",
+          static_cast<int>(person->host_state()),
+          static_cast<int>(person->all_clonal_parasite_populations()->size()),
+          last_time,
+          -1.0,
+          person->immune_system()->get_current_value(),
+          -1.0,
+          "v4 duplicate: same age-0 person counted again within min_gap days");
+    }
   }
 
-  Model::MAIN_DATA_COLLECTOR->collect_1_clinical_episode(
-      person->location(),
-      person->age(),
-      person->age_class());
+  // if (last_time > -100000 && gap < min_gap) {
+  //   fprintf(
+  //           stderr,
+  //           "CLINICAL_COUNT_WITHIN_%d_DAYS person_uid=%lld today=%d last_time=%d gap=%d age=%d location=%d age_class=%d\n",
+  //           min_gap,
+  //           static_cast<long long>(person->get_uid()),
+  //           today,
+  //           last_time,
+  //           gap,
+  //           person->age(),
+  //           person->location(),
+  //           person->age_class()
+  //       );
+  // }
+
+  if (today - person->get_last_counted_clinical_episode_time() >= min_gap) {
+    if (person->age() == 0) {
+      DEBUG_MONTHLY_STATS.record_clinical_count_age0_after_min_gap();
+    }
+
+    Model::MAIN_DATA_COLLECTOR->collect_1_clinical_episode(
+        person->location(),
+        person->age(),
+        person->age_class());
+
+    person->set_last_counted_clinical_episode_time(today);
+  }
+
   const auto p = Model::RANDOM->random_flat(0.0, 1.0);
 
   const auto p_treatment =

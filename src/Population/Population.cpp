@@ -125,9 +125,28 @@ void Population::perform_infection_event() {
   for (auto loc = 0; loc < Model::CONFIG->number_of_locations(); loc++) {
     // Calculate location adjustments
 
-    const auto new_beta = Model::CONFIG->location_db()[loc].beta
-                          * Model::CONFIG->seasonal_info()->get_seasonal_factor(
-                              Model::SCHEDULER->calendar_date, loc);
+    const double beta = Model::CONFIG->location_db()[loc].beta;
+
+    const double seasonal_factor =
+        Model::CONFIG->seasonal_info()->get_seasonal_factor(
+            Model::SCHEDULER->calendar_date, loc);
+
+    const double new_beta = beta * seasonal_factor;
+
+    // Before parasite_type loop, once per loc
+    for (int biting_level = 0;
+         biting_level < Model::CONFIG->relative_bitting_info().number_of_biting_levels;
+         biting_level++) {
+      const double level_weight =
+          Model::CONFIG->relative_bitting_info().v_biting_level_value[biting_level];
+
+      for (auto* person : pi->vPerson()[loc][biting_level]) {
+          DEBUG_MONTHLY_STATS.record_bite_eligible_person(
+              level_weight,
+              person->age()
+          );
+        }
+      }
 
     // Iterate over all the parasite types
     for (std::size_t parasite_type_id = 0;
@@ -144,6 +163,21 @@ void Population::perform_infection_event() {
       // Calculate the number of bites, if 0 then press on
       auto poisson_means = new_beta * force_of_infection;
       auto number_of_bites = Model::RANDOM->random_poisson(poisson_means);
+
+      DEBUG_MONTHLY_STATS.record_bite_term(
+        Model::SCHEDULER->current_time(),
+        Model::SCHEDULER->current_time() / 30,
+        loc,
+        static_cast<int>(parasite_type_id),
+        beta,
+        seasonal_factor,
+        new_beta,
+        force_of_infection,
+        poisson_means,
+        number_of_bites,
+        "v43 genotype-specific FOI"
+    );
+
       if (number_of_bites <= 0) { continue; }
 
       DEBUG_MONTHLY_STATS.record_foi(force_of_infection);
@@ -184,12 +218,30 @@ void Population::perform_infection_event() {
           // If the person is not dead, inflict the bite upon them,
           // an update today's infection if they get infected
           assert(person->host_state() != Person::DEAD);
+
+          DEBUG_MONTHLY_STATS.record_bite_selected_person(
+              person->base_biting_level_value(),
+              person->age()
+          );
+
           if (person->age() == 0) {
             DEBUG_MONTHLY_STATS.record_bite_attempt_age0();
             DEBUG_MONTHLY_STATS.record_infectious_bite_age0();
+
+            DEBUG_MONTHLY_STATS.record_relative_biting_rate_age0(
+                person->base_biting_level_value()
+            );
           }
 
-          if (person->inflict_bite(parasite_type_id)) {
+          const bool infected = person->inflict_bite(parasite_type_id);
+
+          if (person->age() == 0) {
+            DEBUG_MONTHLY_STATS.record_infection_probability_age0(
+                person->last_infection_probability_debug()
+            );
+          }
+
+          if (infected) {
             today_infections.push_back(person);
             DEBUG_MONTHLY_STATS.record_successful_infection();
 
@@ -221,11 +273,33 @@ void Population::perform_infection_event() {
 #endif
 }
 
+static void write_debug_infectivity_grid_v4() {
+  std::ofstream out("debug_relative_infectivity_v4.csv", std::ios::trunc);
+
+  const double sigma = Model::CONFIG->relative_infectivity().sigma;
+  const double ro_star = Model::CONFIG->relative_infectivity().ro_star;
+
+  out << "version,sigma,ro_star,log10_density,relative_infectivity\n";
+
+  for (double d = -1.0; d <= 6.0; d += 0.5) {
+    const double d_n = d * sigma + ro_star;
+    const double p = Model::RANDOM->cdf_standard_normal_distribution(d_n);
+    const double ri = p * p + 0.01;
+
+    out << "v4,"
+        << sigma << ","
+        << ro_star << ","
+        << d << ","
+        << ri << "\n";
+  }
+}
+
 void Population::initialize() {
   // Verify that our assumptions are correct
   if (model() == nullptr) { return; }
   assert(Model::CONFIG->death_rate_by_age_class().size()
          == Model::CONFIG->number_of_age_classes());
+  write_debug_infectivity_grid_v4();
 
   // Prepare the population size vector
   popsize_by_location_ = IntVector(Model::CONFIG->number_of_locations(), 0);

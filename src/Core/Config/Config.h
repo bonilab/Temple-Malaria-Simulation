@@ -162,6 +162,8 @@ public:
 
   VIRTUAL_PROPERTY_REF(double, modified_mutation_probability)
 
+  CONFIG_ITEM(minimum_days_for_counting_new_clinical_episode, int, 0)
+
   explicit Config(Model* model = nullptr);
 
   virtual ~Config();

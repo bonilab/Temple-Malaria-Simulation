@@ -175,7 +175,7 @@ void Population::perform_infection_event() {
           force_of_infection,
           poisson_means,
           number_of_bites,
-          "v43 genotype-specific FOI"
+          "v42 genotype-specific FOI"
       );
 
       if (number_of_bites <= 0) { continue; }
@@ -275,7 +275,7 @@ void Population::perform_infection_event() {
 #include <fstream>
 #include <cmath>
 
-static void write_debug_infectivity_grid_v43() {
+static void write_debug_infectivity_grid_v4() {
   std::ofstream out("debug_relative_infectivity_v42.csv", std::ios::trunc);
 
   const double sigma = Model::CONFIG->relative_infectivity().sigma;
@@ -288,7 +288,7 @@ static void write_debug_infectivity_grid_v43() {
     const double p = Model::RANDOM->cdf_standard_normal_distribution(d_n);
     const double ri = p * p + 0.01;
 
-    out << "v43,"
+    out << "v4,"
         << sigma << ","
         << ro_star << ","
         << d << ","
@@ -302,7 +302,7 @@ void Population::initialize() {
   assert(Model::CONFIG->death_rate_by_age_class().size()
          == Model::CONFIG->number_of_age_classes());
 
-  write_debug_infectivity_grid_v43();
+  write_debug_infectivity_grid_v4();
 
   // Prepare the population size vector
   popsize_by_location_ = IntVector(Model::CONFIG->number_of_locations(), 0);
@@ -430,7 +430,7 @@ void Population::introduce_initial_cases() {
   // Return if there is no model
   if (model() == nullptr) { return; }
 
-  std::cout << "[DEBUG_INFECTIVITY_PARAMS] version=v43 "
+  std::cout << "[DEBUG_INFECTIVITY_PARAMS] version=v42 "
           << "sigma=" << Model::CONFIG->relative_infectivity().sigma
           << " ro_star=" << Model::CONFIG->relative_infectivity().ro_star
           << std::endl;

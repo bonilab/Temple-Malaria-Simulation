@@ -71,16 +71,16 @@ void ProgressToClinicalEvent::execute() {
   //     person->location(),
   //     person->age(),
   //     person->age_class());
+  // Compute gap info ONCE — used by both debug recording and MDC gate
   const int today = Model::SCHEDULER->current_time();
   const int min_gap = Model::CONFIG->minimum_days_for_counting_new_clinical_episode();
-
   const int last_time = person->get_last_counted_clinical_episode_time();
   const int gap = today - last_time;
+  const bool will_be_rejected = (last_time > -100000) && (gap < min_gap);
 
+  // --- Age-0 debug recording ---
   if (person->age() == 0) {
-    DEBUG_MONTHLY_STATS.record_clinical_count_age0_normal(
-      static_cast<long long>(person->get_uid()));
-
+    DEBUG_MONTHLY_STATS.record_clinical_count_age0_normal(will_be_rejected);
     DEBUG_MONTHLY_STATS.record_clinical_count_age0_new_infection();
 
     DEBUG_MONTHLY_STATS.record_age0_clinical_event(
@@ -97,16 +97,16 @@ void ProgressToClinicalEvent::execute() {
         -1.0,
         person->immune_system()->get_current_value(),
         -1.0,
-        "v4 ProgressToClinicalEvent::execute: event executed and person became CLINICAL");
+        "v43 ProgressToClinicalEvent::execute: event executed and person became CLINICAL");
 
-    if (last_time > -100000 && gap < min_gap) {
+    if (will_be_rejected) {
       DEBUG_MONTHLY_STATS.record_age0_clinical_event(
           today / 30,
           today,
           static_cast<long long>(person->get_uid()),
           person->age(),
           person->location(),
-          "duplicate_count_normal",
+          "rejected_count_normal",
           "normal_progression",
           static_cast<int>(person->host_state()),
           static_cast<int>(person->all_clonal_parasite_populations()->size()),
@@ -114,26 +114,12 @@ void ProgressToClinicalEvent::execute() {
           -1.0,
           person->immune_system()->get_current_value(),
           -1.0,
-          "v4 duplicate: same age-0 person counted again within min_gap days");
+          "v43 rejected: same age-0 person within min_gap days");
     }
   }
 
-  // if (last_time > -100000 && gap < min_gap) {
-  //   fprintf(
-  //           stderr,
-  //           "CLINICAL_COUNT_WITHIN_%d_DAYS person_uid=%lld today=%d last_time=%d gap=%d age=%d location=%d age_class=%d\n",
-  //           min_gap,
-  //           static_cast<long long>(person->get_uid()),
-  //           today,
-  //           last_time,
-  //           gap,
-  //           person->age(),
-  //           person->location(),
-  //           person->age_class()
-  //       );
-  // }
-
-  if (today - person->get_last_counted_clinical_episode_time() >= min_gap) {
+  // --- MDC official incidence count ---
+  if (!will_be_rejected) {
     if (person->age() == 0) {
       DEBUG_MONTHLY_STATS.record_clinical_count_age0_after_min_gap();
     }

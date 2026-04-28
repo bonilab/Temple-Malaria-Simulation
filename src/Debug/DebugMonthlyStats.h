@@ -9,7 +9,6 @@
 
 #include <fstream>
 #include <string>
-#include <unordered_map>
 
 struct DebugMonthlyStats {
   int current_month = -1;
@@ -46,18 +45,16 @@ struct DebugMonthlyStats {
 
   long long clinical_count_age0_new_infection = 0;
 
-  std::unordered_map<long long, int> clinical_count_age0_by_person;
-  long long clinical_count_age0_duplicate_person = 0;
-
   long long clinical_count_age0_from_normal_progression = 0;
   long long clinical_count_age0_from_recurrence = 0;
   long long clinical_count_age0_from_relapse = 0;
   long long clinical_count_age0_from_unknown = 0;
 
-  long long clinical_count_age0_duplicate_normal = 0;
-  long long clinical_count_age0_duplicate_recurrence = 0;
-  long long clinical_count_age0_duplicate_relapse = 0;
-  long long clinical_count_age0_duplicate_unknown = 0;
+  long long clinical_count_age0_rejected_by_min_gap = 0;
+  long long clinical_count_age0_rejected_normal = 0;
+  long long clinical_count_age0_rejected_recurrence = 0;
+  long long clinical_count_age0_rejected_relapse = 0;
+  long long clinical_count_age0_rejected_unknown = 0;
   long long clinical_count_age0_after_min_gap = 0;
 
   // ------------------------------------------------------------
@@ -186,18 +183,17 @@ struct DebugMonthlyStats {
     clinical_will_schedule_age0 = 0;
 
     clinical_count_age0_new_infection = 0;
-    clinical_count_age0_duplicate_person = 0;
-    clinical_count_age0_by_person.clear();
 
     clinical_count_age0_from_normal_progression = 0;
     clinical_count_age0_from_recurrence = 0;
     clinical_count_age0_from_relapse = 0;
     clinical_count_age0_from_unknown = 0;
 
-    clinical_count_age0_duplicate_normal = 0;
-    clinical_count_age0_duplicate_recurrence = 0;
-    clinical_count_age0_duplicate_relapse = 0;
-    clinical_count_age0_duplicate_unknown = 0;
+    clinical_count_age0_rejected_by_min_gap = 0;
+    clinical_count_age0_rejected_normal = 0;
+    clinical_count_age0_rejected_recurrence = 0;
+    clinical_count_age0_rejected_relapse = 0;
+    clinical_count_age0_rejected_unknown = 0;
     clinical_count_age0_after_min_gap = 0;
 
     bite_eligible_persons_total = 0;
@@ -330,54 +326,39 @@ struct DebugMonthlyStats {
     clinical_count_age0_new_infection++;
   }
 
-  bool record_clinical_count_age0_person(long long person_id) {
+  void record_clinical_count_age0_normal(bool rejected_by_gap) {
     clinical_count_age0++;
-
-    int& count = clinical_count_age0_by_person[person_id];
-    count++;
-
-    if (count > 1) {
-      clinical_count_age0_duplicate_person++;
-      return true;
-    }
-
-    return false;
-  }
-
-  void record_clinical_count_age0_normal(long long person_id) {
-    const bool duplicate = record_clinical_count_age0_person(person_id);
     clinical_count_age0_from_normal_progression++;
-
-    if (duplicate) {
-      clinical_count_age0_duplicate_normal++;
+    if (rejected_by_gap) {
+      clinical_count_age0_rejected_by_min_gap++;
+      clinical_count_age0_rejected_normal++;
     }
   }
 
-  void record_clinical_count_age0_recurrence(long long person_id) {
-    const bool duplicate = record_clinical_count_age0_person(person_id);
+  void record_clinical_count_age0_recurrence(bool rejected_by_gap) {
+    clinical_count_age0++;
     clinical_count_age0_from_recurrence++;
-
-    if (duplicate) {
-      clinical_count_age0_duplicate_recurrence++;
+    if (rejected_by_gap) {
+      clinical_count_age0_rejected_by_min_gap++;
+      clinical_count_age0_rejected_recurrence++;
     }
   }
 
-
-  void record_clinical_count_age0_relapse(long long person_id) {
-    const bool duplicate = record_clinical_count_age0_person(person_id);
+  void record_clinical_count_age0_relapse(bool rejected_by_gap) {
+    clinical_count_age0++;
     clinical_count_age0_from_relapse++;
-
-    if (duplicate) {
-      clinical_count_age0_duplicate_relapse++;
+    if (rejected_by_gap) {
+      clinical_count_age0_rejected_by_min_gap++;
+      clinical_count_age0_rejected_relapse++;
     }
   }
 
-  void record_clinical_count_age0_unknown(long long person_id) {
-    const bool duplicate = record_clinical_count_age0_person(person_id);
+  void record_clinical_count_age0_unknown(bool rejected_by_gap) {
+    clinical_count_age0++;
     clinical_count_age0_from_unknown++;
-
-    if (duplicate) {
-      clinical_count_age0_duplicate_unknown++;
+    if (rejected_by_gap) {
+      clinical_count_age0_rejected_by_min_gap++;
+      clinical_count_age0_rejected_unknown++;
     }
   }
 
@@ -507,15 +488,16 @@ struct DebugMonthlyStats {
           << "mean_infection_probability_age0,n_infection_probability_age0,"
           << "clinical_scheduled_age0,clinical_count_age0,"
           << "clinical_decision_age0,clinical_will_schedule_age0,"
-          << "clinical_count_age0_new_infection,clinical_count_age0_duplicate_person,"
+          << "clinical_count_age0_new_infection,"
           << "clinical_count_age0_from_normal_progression,"
           << "clinical_count_age0_from_recurrence,"
           << "clinical_count_age0_from_relapse,"
           << "clinical_count_age0_from_unknown,"
-          << "clinical_count_age0_duplicate_normal,"
-          << "clinical_count_age0_duplicate_recurrence,"
-          << "clinical_count_age0_duplicate_relapse,"
-          << "clinical_count_age0_duplicate_unknown,"
+          << "clinical_count_age0_rejected_by_min_gap,"
+          << "clinical_count_age0_rejected_normal,"
+          << "clinical_count_age0_rejected_recurrence,"
+          << "clinical_count_age0_rejected_relapse,"
+          << "clinical_count_age0_rejected_unknown,"
           << "clinical_count_age0_after_min_gap,"
           << "bite_eligible_persons_total,"
           << "bite_eligible_persons_age0,"
@@ -633,15 +615,15 @@ struct DebugMonthlyStats {
         << clinical_decision_age0 << ","
         << clinical_will_schedule_age0 << ","
         << clinical_count_age0_new_infection << ","
-        << clinical_count_age0_duplicate_person << ","
         << clinical_count_age0_from_normal_progression << ","
         << clinical_count_age0_from_recurrence << ","
         << clinical_count_age0_from_relapse << ","
         << clinical_count_age0_from_unknown << ","
-        << clinical_count_age0_duplicate_normal << ","
-        << clinical_count_age0_duplicate_recurrence << ","
-        << clinical_count_age0_duplicate_relapse << ","
-        << clinical_count_age0_duplicate_unknown << ","
+        << clinical_count_age0_rejected_by_min_gap << ","
+        << clinical_count_age0_rejected_normal << ","
+        << clinical_count_age0_rejected_recurrence << ","
+        << clinical_count_age0_rejected_relapse << ","
+        << clinical_count_age0_rejected_unknown << ","
         << clinical_count_age0_after_min_gap << ","
         << bite_eligible_persons_total << ","
         << bite_eligible_persons_age0 << ","

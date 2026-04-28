@@ -194,13 +194,11 @@ void SQLiteMonthlyReporter::monthly_report_site_data(int monthId) {
     calculate_and_build_up_site_data_insert_values(monthId, level_id);
     insert_monthly_site_data(level_id, insert_values);
   }
-  const int month = Model::SCHEDULER->current_time() / 30;
-
   // Replace these with actual collector/reporter values if available.
   double pfpr = -1.0;
   double incidence = -1.0;
 
-  DEBUG_MONTHLY_STATS.write_month(month, pfpr, incidence);
+  DEBUG_MONTHLY_STATS.write_month(monthId, pfpr, incidence);
 }
 
 
